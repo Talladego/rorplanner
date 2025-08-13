@@ -43,22 +43,38 @@ const magicOrder = [
 
 // Revert to per-slot filtering only; no career/type weapon logic for now.
 
-function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = [], magicList = [] }) {
+function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = [], magicList = [], primaryContrib = {}, defContrib = {}, offContrib = {}, magContrib = {} }) {
+  const fmtTitle = (entries) => {
+    if (!Array.isArray(entries) || !entries.length) return '';
+    return entries
+      .map((e) => {
+        const parts = [];
+        if (typeof e.flat === 'number' && e.flat) parts.push(`+${e.flat}`);
+        if (typeof e.pct === 'number' && e.pct) parts.push(`+${Number.isInteger(e.pct) ? e.pct : e.pct.toFixed(2)}%`);
+        const val = parts.join(' ');
+        return `${e.source}${val ? `: ${val}` : ''}`;
+      })
+      .join('\n');
+  };
   return (
     <div className="stats-panel">
       <div className="stats-lines">
-        {statOrder.map((name) => (
-          <div key={name} className="stats-line">
-            <span className="label">{name}</span>
-            <span className="value">{totals[name] || 0}</span>
-          </div>
-        ))}
+        {statOrder.filter((name) => (totals[name] || 0) !== 0).map((name) => {
+          const val = totals[name] || 0;
+          const title = fmtTitle(primaryContrib[name] || []);
+          return (
+            <div key={name} className="stats-line" title={title}>
+              <span className="label">{name}</span>
+              <span className="value">{val}</span>
+            </div>
+          );
+        })}
       </div>
       <div className="stats-separator" />
       {/* Defense */}
       <div className="stats-lines">
-        {defenseList.map((s) => (
-          <div key={s.label} className="stats-line">
+        {defenseList.filter((s) => s && String(s.value) !== '0').map((s) => (
+          <div key={s.label} className="stats-line" title={fmtTitle(defContrib[s.label] || [])}>
             <span className="label">{s.label}</span>
             <span className="value">{s.value}</span>
           </div>
@@ -67,8 +83,8 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
       <div className="stats-separator" />
       {/* Offense */}
       <div className="stats-lines">
-        {offenseList.map((s) => (
-          <div key={s.label} className="stats-line">
+        {offenseList.filter((s) => s && String(s.value) !== '0').map((s) => (
+          <div key={s.label} className="stats-line" title={fmtTitle(offContrib[s.label] || [])}>
             <span className="label">{s.label}</span>
             <span className="value">{s.value}</span>
           </div>
@@ -77,8 +93,8 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
       <div className="stats-separator" />
       {/* Magic */}
       <div className="stats-lines">
-        {magicList.map((s) => (
-          <div key={s.label} className="stats-line">
+        {magicList.filter((s) => s && String(s.value) !== '0').map((s) => (
+          <div key={s.label} className="stats-line" title={fmtTitle(magContrib[s.label] || [])}>
             <span className="label">{s.label}</span>
             <span className="value">{s.value}</span>
           </div>
@@ -1040,11 +1056,22 @@ export default function Planner({ variant = 'grid' }) {
     const defAgg = mkAgg();
     const offAgg = mkAgg();
     const magAgg = mkAgg();
+    const defSrc = new Map(); // label -> Map(source -> {flat,pct})
+    const offSrc = new Map();
+    const magSrc = new Map();
     const add = (agg, label, kind, val) => {
       if (!label || !val) return;
       const cur = agg.get(label) || { flat: 0, pct: 0 };
       if (kind === 'pct') cur.pct += val; else cur.flat += val;
       agg.set(label, cur);
+    };
+    const addSrc = (srcMap, label, source, kind, val) => {
+      if (!label || !source || !val) return;
+      let bySrc = srcMap.get(label);
+      if (!bySrc) { bySrc = new Map(); srcMap.set(label, bySrc); }
+      const cur = bySrc.get(source) || { flat: 0, pct: 0 };
+      if (kind === 'pct') cur.pct += val; else cur.flat += val;
+      bySrc.set(source, cur);
     };
     const title = (s) => String(s || '').replace(/[_%]+/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).trim();
     const canon = (raw, unitIsPct = false) => {
@@ -1078,7 +1105,10 @@ export default function Planner({ variant = 'grid' }) {
     for (const it of items) {
       const det = it?.details || {};
       const armorVal = typeof det?.armor === 'number' ? det.armor : undefined;
-      if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) add(defAgg, 'Armor', 'flat', armorVal);
+      if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) {
+        add(defAgg, 'Armor', 'flat', armorVal);
+        addSrc(defSrc, 'Armor', it.name, 'flat', armorVal);
+      }
       const stats = Array.isArray(det?.stats) ? det.stats : [];
       for (const s of stats) {
         const nm = title(s?.stat);
@@ -1086,7 +1116,11 @@ export default function Planner({ variant = 'grid' }) {
         if (!v) continue;
         const m = canon(nm, s?.unit === '%');
         if (!m) continue;
-        add(m.cat === 'def' ? defAgg : m.cat === 'off' ? offAgg : magAgg, m.key, m.pct ? 'pct' : (s?.unit === '%' ? 'pct' : 'flat'), v);
+        const catAgg = m.cat === 'def' ? defAgg : m.cat === 'off' ? offAgg : magAgg;
+        const catSrc = m.cat === 'def' ? defSrc : m.cat === 'off' ? offSrc : magSrc;
+        const kind = m.pct ? 'pct' : (s?.unit === '%' ? 'pct' : 'flat');
+        add(catAgg, m.key, kind, v);
+        addSrc(catSrc, m.key, it.name, kind, v);
       }
     }
     // Active set bonuses: parse bonus lines
@@ -1098,7 +1132,13 @@ export default function Planner({ variant = 'grid' }) {
           const val = parseFloat(m[1]);
           const lab = title(m[2]);
           const c = canon(lab, true);
-          if (c) add(c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg, c.key, 'pct', val);
+          if (c) {
+            const catAgg = c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg;
+            const catSrc = c.cat === 'def' ? defSrc : c.cat === 'off' ? offSrc : magSrc;
+            const src = `Set: ${grp.name}`;
+            add(catAgg, c.key, 'pct', val);
+            addSrc(catSrc, c.key, src, 'pct', val);
+          }
           continue;
         }
         m = line.match(/^\+\s*(\d+)\s+(.+)$/i);
@@ -1106,7 +1146,13 @@ export default function Planner({ variant = 'grid' }) {
           const val = parseInt(m[1], 10);
           const lab = title(m[2]);
           const c = canon(lab, false);
-          if (c) add(c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg, c.key, 'flat', val);
+          if (c) {
+            const catAgg = c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg;
+            const catSrc = c.cat === 'def' ? defSrc : c.cat === 'off' ? offSrc : magSrc;
+            const src = `Set: ${grp.name}`;
+            add(catAgg, c.key, 'flat', val);
+            addSrc(catSrc, c.key, src, 'flat', val);
+          }
         }
       }
     }
@@ -1120,11 +1166,66 @@ export default function Planner({ variant = 'grid' }) {
       const v = agg.get(label) || { flat: 0, pct: 0 };
       return { label, value: fmt(v.flat, v.pct) };
     });
+    const toContrib = (srcMap, order) => Object.fromEntries(order.map((label) => {
+      const bySrc = srcMap.get(label) || new Map();
+      const arr = Array.from(bySrc.entries()).map(([source, vals]) => ({ source, flat: vals.flat || 0, pct: vals.pct || 0 }))
+        .filter(e => e.flat || e.pct);
+      return [label, arr];
+    }));
     return {
       defenseList: toList(defAgg, defenseOrder),
       offenseList: toList(offAgg, offenseOrder),
       magicList: toList(magAgg, magicOrder),
+      defContrib: toContrib(defSrc, defenseOrder),
+      offContrib: toContrib(offSrc, offenseOrder),
+      magContrib: toContrib(magSrc, magicOrder),
     };
+  }, [equipped, activeSetBonuses]);
+
+  // Primary stats contributions for tooltip
+  const primaryContrib = useMemo(() => {
+    const mapKey = (name) => {
+      const n = (name || '').trim().toLowerCase();
+      if (n === 'strength') return 'Strength';
+      if (n === 'ballistic skill') return 'Ballistic Skill';
+      if (n === 'intelligence') return 'Intelligence';
+      if (n === 'toughness') return 'Toughness';
+      if (n === 'weapon skill') return 'Weapon Skill';
+      if (n === 'initiative') return 'Initiative';
+      if (n === 'willpower') return 'Willpower';
+      if (n === 'wounds') return 'Wounds';
+      return null;
+    };
+    const out = new Map(); // label -> Map(source -> {flat})
+    const add = (label, source, val) => {
+      if (!label || !source || !val) return;
+      let bySrc = out.get(label);
+      if (!bySrc) { bySrc = new Map(); out.set(label, bySrc); }
+      const cur = bySrc.get(source) || { flat: 0, pct: 0 };
+      cur.flat += val;
+      bySrc.set(source, cur);
+    };
+    const items = Object.values(equipped).filter(Boolean);
+    for (const it of items) {
+      const stats = Array.isArray(it?.details?.stats) ? it.details.stats : [];
+      for (const s of stats) {
+        if (s?.unit === '%') continue;
+        const key = mapKey(s?.stat);
+        const v = typeof s?.value === 'number' ? s.value : 0;
+        if (key && v) add(key, it.name, v);
+      }
+    }
+    for (const grp of (activeSetBonuses || [])) {
+      for (const b of (grp?.bonuses || [])) {
+        const line = String(b?.bonus || '');
+        const m = line.match(/^\+\s*(\d+)\s+(.+)$/i);
+        if (!m) continue;
+        const val = parseInt(m[1], 10);
+        const label = mapKey(m[2]);
+        if (label && val) add(label, `Set: ${grp.name}`, val);
+      }
+    }
+    return Object.fromEntries(Array.from(out.entries()).map(([label, bySrc]) => [label, Array.from(bySrc.entries()).map(([source, vals]) => ({ source, flat: vals.flat || 0 }))]));
   }, [equipped, activeSetBonuses]);
 
   const Toolbar = (
@@ -1164,7 +1265,7 @@ export default function Planner({ variant = 'grid' }) {
         {slots.map((slot) => (
           <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={equipped[slot.name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
         ))}
-  <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
+  <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
       </div>
       <ItemPicker
         open={pickerOpen}
@@ -1218,7 +1319,7 @@ export default function Planner({ variant = 'grid' }) {
           </div>
           <div className="classic-right">
             <div className="classic-stats">
-              <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
+              <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
             </div>
           </div>
           <div className="classic-bottom">
@@ -1299,7 +1400,7 @@ export default function Planner({ variant = 'grid' }) {
             ))}
           </div>
           <div className="ror-stats">
-            <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
+            <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
           </div>
         </div>
         </div>

@@ -357,3 +357,5 @@
 }
 .stats-line .label { opacity: 0.9; }
 .stats-line .value { font-weight: 600; }
+.stats-lines .stats-line:nth-child(odd) { background: rgba(255,255,255,0.03); border-radius: 4px; padding: 3px 6px; }
+.stats-lines .stats-line:nth-child(even) { background: rgba(0,0,0,0.08); border-radius: 4px; padding: 3px 6px; }
