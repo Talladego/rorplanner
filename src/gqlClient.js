@@ -29,7 +29,7 @@ function toEnum(val) {
   return String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
-export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq }) {
+export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq, rarityEq }) {
   const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career){
     items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer){
       edges{ node{ id name description type slot levelRequirement itemLevel renownRankRequirement iconUrl talismanSlots rarity uniqueEquipped careerRestriction itemSet{ id name } stats { stat value percentage } } }
@@ -42,6 +42,9 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   }
   if (slotEq) {
     where.slot = { eq: toEnum(slotEq) };
+  }
+  if (rarityEq) {
+    where.rarity = { eq: toEnum(rarityEq) };
   }
   // Use server-side career filter when provided; we will fallback without it if needed
   const usableCareer = career ? toEnum(career) : undefined;

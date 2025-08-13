@@ -343,7 +343,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   );
 }
 
-function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity }) {
+function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -353,7 +353,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
             <input
               placeholder="Filter name"
               value={filterName}
@@ -383,7 +383,11 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
               <option value="VERY_RARE">Very Rare</option>
               <option value="MYTHIC">Mythic</option>
             </select>
-            <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); }}>Clear</button>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={!!filterSetOnly} onChange={(e) => setFilterSetOnly(e.target.checked)} />
+              Set items only
+            </label>
+            <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); setFilterSetOnly(false); }}>Clear</button>
           </div>
           {loading && <div>Loading…</div>}
           {error && <div style={{ color: 'crimson' }}>Failed to load items. {(error?.message || '').toString()}</div>}
@@ -392,7 +396,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
           )}
           {!loading && !error && items && items.length > 0 && (
             <div className="item-list">
-      {items.map((it) => {
+      {(items.filter(it => !filterSetOnly || !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name))).map((it) => {
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
     const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
     const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
@@ -424,6 +428,7 @@ export default function Planner({ variant = 'grid' }) {
   const [filterName, setFilterName] = useState('');
   const [filterStat, setFilterStat] = useState('');
   const [filterRarity, setFilterRarity] = useState('');
+  const [filterSetOnly, setFilterSetOnly] = useState(false);
   // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
   const [iconFallbacks, setIconFallbacks] = useState(null); // no remote fallbacks on Pages
@@ -714,8 +719,8 @@ export default function Planner({ variant = 'grid' }) {
           // Some universal rings (e.g., Annulus) can be under-returned by usableByCareer for certain careers.
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
           const [withCareerLists, withoutCareerLists] = await Promise.all([
-            Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true }))),
-            Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })))
+            Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined }))),
+            Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined })))
           ]);
           const byId = new Map();
           for (const arr of [...withCareerLists, ...withoutCareerLists]) {
@@ -744,7 +749,7 @@ export default function Planner({ variant = 'grid' }) {
           const byId = new Map();
           for (const sv of slotVariants) {
             try {
-              const arr = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv });
+              const arr = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (arr || [])) byId.set(String(n.id), n);
               // If we found items for one variant, we can continue to merge, or break early; keep merging to be safe
             } catch (e) {
@@ -755,7 +760,7 @@ export default function Planner({ variant = 'grid' }) {
           // Include 2H for main hand visibility (many planners list 2H in main hand)
           if (target === 'main hand') {
             try {
-              const twoHand = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: 'TWO_HAND' });
+              const twoHand = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: 'TWO_HAND', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (twoHand || [])) byId.set(String(n.id), n);
             } catch {}
           }
@@ -763,7 +768,7 @@ export default function Planner({ variant = 'grid' }) {
           if (byId.size === 0) {
             for (const sv of slotVariants) {
               try {
-                const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true });
+                const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
                 for (const n of (noCareer || [])) byId.set(String(n.id), n);
                 if (byId.size) break;
               } catch {}
@@ -855,7 +860,7 @@ export default function Planner({ variant = 'grid' }) {
         if (isJewelryTarget && items.length === 0) {
           // Retry without career; query accessory slots explicitly again
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })));
+          const results = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined })));
           const byId2 = new Map();
           for (const arr of results) for (const it of (arr || [])) byId2.set(String(it.id), it);
           const itemsRawAll = Array.from(byId2.values());
@@ -871,7 +876,7 @@ export default function Planner({ variant = 'grid' }) {
           // Final fallback: fetch any by slot without name filter
           if (items.length === 0) {
             const anyById = new Map();
-            const more = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })));
+            const more = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined })));
             for (const arr of more) for (const it of (arr || [])) anyById.set(String(it.id), it);
             const anyItems = Array.from(anyById.values());
             items = (anyItems || [])
@@ -1285,6 +1290,8 @@ export default function Planner({ variant = 'grid' }) {
   setFilterStat={setFilterStat}
   filterRarity={filterRarity}
   setFilterRarity={setFilterRarity}
+  filterSetOnly={filterSetOnly}
+  setFilterSetOnly={setFilterSetOnly}
       />
     </div>
   );
@@ -1346,6 +1353,8 @@ export default function Planner({ variant = 'grid' }) {
           setFilterStat={setFilterStat}
           filterRarity={filterRarity}
           setFilterRarity={setFilterRarity}
+          filterSetOnly={filterSetOnly}
+          setFilterSetOnly={setFilterSetOnly}
         />
       </div>
     );
@@ -1422,6 +1431,8 @@ export default function Planner({ variant = 'grid' }) {
           setFilterStat={setFilterStat}
           filterRarity={filterRarity}
           setFilterRarity={setFilterRarity}
+          filterSetOnly={filterSetOnly}
+          setFilterSetOnly={setFilterSetOnly}
         />
       </div>
     );
