@@ -817,7 +817,7 @@ export default function Planner({ variant = 'grid' }) {
           // Final fallback: fetch any by slot without name filter
           if (items.length === 0) {
             const anyById = new Map();
-            const more = await Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })));
+            const more = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })));
             for (const arr of more) for (const it of (arr || [])) anyById.set(String(it.id), it);
             const anyItems = Array.from(anyById.values());
             items = (anyItems || [])

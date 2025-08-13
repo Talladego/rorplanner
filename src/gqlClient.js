@@ -47,10 +47,20 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   const usable = undefined;
   const out = [];
   let after = undefined;
-  const MAX_FIRST = 50;
-  const pageSize = Math.max(1, Math.min(Number(perPage) || 50, MAX_FIRST));
+  let currentFirst = Math.max(1, Math.min(Number(perPage) || 50, 50));
+  // Fetch pages, reducing page size if server enforces a lower maximum
   do {
-    const data = await post(q, { first: pageSize, after, where, usableByCareer: usable });
+    let data;
+    try {
+      data = await post(q, { first: currentFirst, after, where, usableByCareer: usable });
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (/maximum allowed items per page/i.test(msg) && currentFirst > 1) {
+        currentFirst = Math.max(1, Math.floor(currentFirst / 2));
+        continue; // retry with smaller page size
+      }
+      throw err;
+    }
     const conn = data?.items;
     const edges = conn?.edges || [];
     for (const e of edges) out.push(e.node);
