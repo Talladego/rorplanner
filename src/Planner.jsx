@@ -693,7 +693,23 @@ export default function Planner({ variant = 'grid' }) {
             if (target === 'event item') return ['EVENT_ITEM','EVENTITEM'];
             if (target === 'pocket 1') return ['POCKET1','POCKET_1'];
             if (target === 'pocket 2') return ['POCKET2','POCKET_2'];
-            return [slotEnum].filter(Boolean);
+            const def = (() => {
+              if (target === 'helm') return 'HELM';
+              if (target === 'shoulders') return 'SHOULDER';
+              if (target === 'cloak') return 'BACK';
+              if (target === 'body') return 'BODY';
+              if (target === 'gloves') return 'GLOVES';
+              if (target === 'belt') return 'BELT';
+              if (target === 'boots') return 'BOOTS';
+              if (target === 'main hand') return 'MAIN_HAND';
+              if (target === 'off hand') return 'OFF_HAND';
+              if (target === 'ranged weapon') return 'RANGED_WEAPON';
+              if (target === 'event item') return 'EVENT_ITEM';
+              if (target === 'pocket 1') return 'POCKET1';
+              if (target === 'pocket 2') return 'POCKET2';
+              return undefined;
+            })();
+            return [def].filter(Boolean);
           })();
           const byId = new Map();
           for (const sv of slotVariants) {
