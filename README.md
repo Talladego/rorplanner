@@ -21,6 +21,7 @@ Notes
 
 - Icons use https://armory.returnofreckoning.com/item/{iconId} when available.
 - Equipped selections persist per career in localStorage. Use the Reset Gear button to clear.
+- The app uses an ErrorBoundary to avoid blank screens; if an error appears on Pages (e.g., a variable not defined), check recent edits around state selectors and memo blocks in `src/Planner.jsx`.
 
 ## Deploy to GitHub Pages
 

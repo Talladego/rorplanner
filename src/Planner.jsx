@@ -1234,14 +1234,15 @@ export default function Planner({ variant = 'grid' }) {
         }
       }
     }
-    // Set bonuses
+  // Set bonuses
     const normalize = (s) => (s || '').trim().toLowerCase();
     const variantOf = (n) => {
       const m = String(n || '').match(/of the\s+([\w\-']+)/i);
       return m ? normalize(m[1]) : '';
     };
     const variantToSetKey = new Map();
-    for (const it of items) {
+  const eqItems = Object.values(equipped).filter(Boolean);
+  for (const it of eqItems) {
       const sk = (it?.details?.setKey || '').trim();
       if (sk) {
         const v = variantOf(it?.name);
@@ -1249,7 +1250,7 @@ export default function Planner({ variant = 'grid' }) {
       }
     }
     const setGroups = new Map(); // key -> { count, bonuses }
-    for (const it of items) {
+  for (const it of eqItems) {
       let skey = (it?.details?.setKey || '').trim();
       let sname = it?.details?.set?.name || '';
       if (!skey) {
@@ -1297,15 +1298,15 @@ export default function Planner({ variant = 'grid' }) {
 
   // Compute active set bonuses for display
   const activeSetBonuses = useMemo(() => {
-  const items = Object.values(equipped).filter(Boolean);
-    if (!items.length) return [];
+  const eqItems = Object.values(equipped).filter(Boolean);
+    if (!eqItems.length) return [];
     const normalize = (s) => (s || '').trim().toLowerCase();
     const variantOf = (n) => {
       const m = String(n || '').match(/of the\s+([\w\-']+)/i);
       return m ? normalize(m[1]) : '';
     };
     const variantToSetKey = new Map();
-    for (const it of items) {
+  for (const it of eqItems) {
       const sk = (it?.details?.setKey || '').trim();
       if (sk) {
         const v = variantOf(it?.name);
@@ -1314,7 +1315,7 @@ export default function Planner({ variant = 'grid' }) {
     }
     // Build groups and pick active bonuses
     const groups = new Map(); // key -> { name, count, bonuses }
-    for (const it of items) {
+  for (const it of eqItems) {
       let skey = (it?.details?.setKey || '').trim();
       if (!skey) {
         const v = variantOf(it?.name);
@@ -1391,9 +1392,9 @@ export default function Planner({ variant = 'grid' }) {
       if (/healing.*crit|crit.*healing/.test(n)) return { cat: 'mag', key: 'Healing Critical Bonus', pct: true };
       return null;
     };
-  const entries = Object.entries(equipped).filter(([, it]) => !!it);
+  const eqEntries = Object.entries(equipped).filter(([, it]) => !!it);
     // Items: base armor and stats
-  for (const [hostName, it] of entries) {
+  for (const [hostName, it] of eqEntries) {
       const det = it?.details || {};
       const armorVal = typeof det?.armor === 'number' ? det.armor : undefined;
       if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) {
@@ -1516,8 +1517,8 @@ export default function Planner({ variant = 'grid' }) {
       cur.flat += val;
       bySrc.set(source, cur);
     };
-    const entries = Object.entries(equipped).filter(([, it]) => !!it);
-    for (const [hostName, it] of entries) {
+  const eqEntries2 = Object.entries(equipped).filter(([, it]) => !!it);
+  for (const [hostName, it] of eqEntries2) {
       const stats = Array.isArray(it?.details?.stats) ? it.details.stats : [];
       for (const s of stats) {
         if (s?.unit === '%') continue;
