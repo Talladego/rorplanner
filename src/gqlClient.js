@@ -41,7 +41,8 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   if (slotEq) {
     where.slot = { eq: toEnum(slotEq) };
   }
-  const usable = career ? toEnum(career) : undefined;
+  // Disable server-side career filter to avoid missing items; filter by career client-side
+  const usable = undefined;
   const out = [];
   let after = undefined;
   do {

@@ -680,14 +680,20 @@ export default function Planner({ variant = 'grid' }) {
           })();
           // Try a set of slot enum variants to be robust to schema changes
           const slotVariants = (() => {
+            if (target === 'helm') return ['HELM', 'HEAD'];
             if (target === 'shoulders') return ['SHOULDER', 'SHOULDERS'];
+            if (target === 'cloak') return ['BACK', 'CLOAK', 'CAPE'];
+            if (target === 'body') return ['BODY', 'CHEST'];
+            if (target === 'gloves') return ['GLOVES', 'HANDS'];
+            if (target === 'belt') return ['BELT', 'WAIST'];
+            if (target === 'boots') return ['BOOTS', 'FEET'];
             if (target === 'main hand') return ['MAIN_HAND', 'MAINHAND'];
             if (target === 'off hand') return ['OFF_HAND', 'OFFHAND'];
             if (target === 'ranged weapon') return ['RANGED_WEAPON', 'RANGED'];
             if (target === 'event item') return ['EVENT_ITEM', 'EVENTITEM'];
             if (target === 'pocket 1') return ['POCKET1', 'POCKET_1'];
             if (target === 'pocket 2') return ['POCKET2', 'POCKET_2'];
-            return [slotEnum];
+            return [slotEnum].filter(Boolean);
           })();
           const byId = new Map();
           // Primary fetch by slot variants with career filter
@@ -719,6 +725,13 @@ export default function Planner({ variant = 'grid' }) {
             const n = raw.slice(-1);
             return `jewelry slot ${n}`;
           }
+            if (raw === 'HEAD' || raw === 'HELM') return 'helm';
+            if (raw === 'SHOULDER' || raw === 'SHOULDERS') return 'shoulders';
+            if (raw === 'BACK' || raw === 'CLOAK' || raw === 'CAPE') return 'cloak';
+            if (raw === 'BODY' || raw === 'CHEST') return 'body';
+            if (raw === 'GLOVES' || raw === 'HANDS') return 'gloves';
+            if (raw === 'BELT' || raw === 'WAIST') return 'belt';
+            if (raw === 'BOOTS' || raw === 'FEET') return 'boots';
             if (raw === 'POCKET1') return 'pocket 1';
             if (raw === 'POCKET2') return 'pocket 2';
             if (raw === 'EVENT_ITEM') return 'event item';
@@ -737,22 +750,9 @@ export default function Planner({ variant = 'grid' }) {
               return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
             }
             // For non-jewelry slots, require exact mapping or exact raw enum
-            const rawMatch = (() => {
-              if (target === 'helm') return raw === 'HELM';
-              if (target === 'shoulders') return raw === 'SHOULDER';
-              if (target === 'cloak') return raw === 'BACK';
-              if (target === 'body') return raw === 'BODY';
-              if (target === 'gloves') return raw === 'GLOVES';
-              if (target === 'belt') return raw === 'BELT';
-              if (target === 'boots') return raw === 'BOOTS';
-              if (target === 'main hand') return raw === 'MAIN_HAND' || raw === 'TWO_HAND';
-              if (target === 'off hand') return raw === 'OFF_HAND';
-              if (target === 'ranged weapon') return raw === 'RANGED_WEAPON';
-              if (target === 'event item') return raw === 'EVENT_ITEM';
-              if (target === 'pocket 1') return raw === 'POCKET1';
-              if (target === 'pocket 2') return raw === 'POCKET2';
-              return false;
-            })();
+            const allowed = new Set(slotVariants);
+            if (target === 'main hand') allowed.add('TWO_HAND');
+            const rawMatch = allowed.has(raw);
             return acceptable.includes(ns) || rawMatch;
           })
           .filter((n) => {
