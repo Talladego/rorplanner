@@ -766,13 +766,21 @@ export default function Planner({ variant = 'grid' }) {
           // Query specific accessory equip slots (JEWELLERY1..4). Merge career-scoped and no-career results.
           // Some universal rings (e.g., Annulus) can be under-returned by usableByCareer for certain careers.
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const [withCareerLists, withoutCareerLists] = await Promise.all([
-            Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined }))),
-            Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined })))
-          ]);
+          const mapCareer = (c) => {
+            const v = String(c || '').trim().toUpperCase();
+            return v === 'BLACKGUARD' ? 'BLACK_GUARD' : v;
+          };
+          const withCareerSettled = await Promise.allSettled(
+            slotsToTry.map(s => fetchItems({ career: mapCareer(career), perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined }))
+          );
+          const withoutCareerSettled = await Promise.allSettled(
+            slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined }))
+          );
           const byId = new Map();
-          for (const arr of [...withCareerLists, ...withoutCareerLists]) {
-            for (const it of (arr || [])) byId.set(String(it.id), it);
+          for (const r of [...withCareerSettled, ...withoutCareerSettled]) {
+            if (r.status === 'fulfilled') {
+              for (const it of (r.value || [])) byId.set(String(it.id), it);
+            }
           }
           itemsRawCareer = Array.from(byId.values());
         } else {
@@ -796,9 +804,13 @@ export default function Planner({ variant = 'grid' }) {
           void slotEnum; // silence unused var; kept for clarity
           // Try likely slot enum variants sequentially; skip invalid enum errors
           const byId = new Map();
+          const mapCareer = (c) => {
+            const v = String(c || '').trim().toUpperCase();
+            return v === 'BLACKGUARD' ? 'BLACK_GUARD' : v;
+          };
           for (const sv of slotVariants) {
             try {
-              const arr = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+              const arr = await fetchItems({ career: mapCareer(career), perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (arr || [])) byId.set(String(n.id), n);
               // If we found items for one variant, we can continue to merge, or break early; keep merging to be safe
             } catch {
@@ -809,7 +821,7 @@ export default function Planner({ variant = 'grid' }) {
           // Include 2H for main hand visibility (many planners list 2H in main hand)
           if (target === 'main hand') {
             try {
-              const twoHand = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: 'TWO_HAND', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+              const twoHand = await fetchItems({ career: mapCareer(career), perPage: 50, totalLimit: 500, slotEq: 'TWO_HAND', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (twoHand || [])) byId.set(String(n.id), n);
             } catch { /* ignore TWO_HAND fetch issues */ }
           }

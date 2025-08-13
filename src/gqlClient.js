@@ -29,6 +29,13 @@ function toEnum(val) {
   return String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
+function mapCareerEnum(val) {
+  const v = toEnum(val);
+  // Known mismatches between UI labels and GraphQL enums
+  if (v === 'BLACKGUARD') return 'BLACK_GUARD';
+  return v;
+}
+
 export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq, rarityEq }) {
   const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career){
     items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer){
@@ -47,7 +54,7 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
     where.rarity = { eq: toEnum(rarityEq) };
   }
   // Use server-side career filter when provided; we will fallback without it if needed
-  const usableCareer = career ? toEnum(career) : undefined;
+  const usableCareer = career ? mapCareerEnum(career) : undefined;
   let out = [];
   let after = undefined;
   let currentFirst = Math.max(1, Math.min(Number(perPage) || 50, 50));
