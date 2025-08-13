@@ -1,6 +1,6 @@
 # ROR Planner (Vite + React)
 
-Plan Warhammer: Return of Reckoning gear by career and rank. The planner now fetches item lists live from the public GraphQL API and hydrates details on demand.
+Plan Warhammer: Return of Reckoning gear by career and rank. The planner fetches items live from the public GraphQL API and hydrates details on demand.
 
 ## Run the app
 
@@ -10,8 +10,7 @@ Plan Warhammer: Return of Reckoning gear by career and rank. The planner now fet
 
 ## Data source
 
-- Live GraphQL: https://production-api.waremu.com/graphql (proxied in dev via Vite at `/graphql`).
-- No local scraping required. Some example GraphQL outputs may be present under `public/data/_gql_*` for debugging.
+- Live GraphQL: https://production-api.waremu.com/graphql (proxied in dev via Vite at `/graphql`). In production you can point the app to a proxy via `VITE_GQL_PROXY_URL`.
 
 ## GraphQL utilities (optional)
 
@@ -29,7 +28,6 @@ This app is a Vite + React SPA and can be hosted on GitHub Pages.
 
 Configured in this repo:
 - Vite base set to `/rorplanner/` in `vite.config.js` (update if your repo name differs).
-- Data fetches use `import.meta.env.BASE_URL` so `/public/data/*` works under Pages.
 - SPA routing: `public/404.html` redirects unknown paths to `index.html`.
 - GitHub Actions workflow `.github/workflows/deploy.yml` builds on pushes to `master` and deploys `dist`.
 
@@ -38,4 +36,4 @@ Steps:
 2) In GitHub → Settings → Pages, set Source: GitHub Actions.
 3) Visit `https://<your-user>.github.io/rorplanner/` when the action completes.
 
-Note: Live GraphQL queries are disabled on `github.io` to avoid CORS; the planner uses local JSON under `public/data` for items. To re-enable live data elsewhere, host behind a proxy or enable CORS at the API and remove the guard in `Planner.jsx`.
+Note: If the API blocks CORS for `github.io`, set an edge proxy (e.g., Cloudflare Worker) and add `VITE_GQL_PROXY_URL` in the Pages workflow or repository secrets to point the app at the proxy.

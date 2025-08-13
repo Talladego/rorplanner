@@ -1,8 +1,8 @@
-// Use the public GraphQL API directly in production. Vite dev uses a proxy for '/graphql'.
-// If CORS is blocked by the API, host behind a proxy (e.g., Cloudflare Worker) or switch hosts.
-const GQL_ENDPOINT = (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+// Prefer a proxy endpoint (e.g., Cloudflare Worker) specified via env, else use dev proxy or direct API.
+const CF_PROXY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GQL_PROXY_URL) ? import.meta.env.VITE_GQL_PROXY_URL : '';
+const GQL_ENDPOINT = CF_PROXY || ((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? '/graphql'
-  : 'https://production-api.waremu.com/graphql';
+  : 'https://production-api.waremu.com/graphql');
 
 async function post(query, variables) {
   const res = await fetch(GQL_ENDPOINT, {
