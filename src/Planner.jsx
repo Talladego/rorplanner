@@ -678,12 +678,34 @@ export default function Planner({ variant = 'grid' }) {
             if (target === 'pocket 2') return 'POCKET2';
             return undefined;
           })();
-          // Use canonical slot enum only to avoid invalid enum errors
+          // Try likely slot enum variants sequentially; skip invalid enum errors
+          const slotVariants = (() => {
+            if (target === 'helm') return ['HELM','HEAD'];
+            if (target === 'shoulders') return ['SHOULDER','SHOULDERS'];
+            if (target === 'cloak') return ['CLOAK','BACK','CAPE'];
+            if (target === 'body') return ['CHEST','BODY'];
+            if (target === 'gloves') return ['HANDS','GLOVES'];
+            if (target === 'belt') return ['WAIST','BELT'];
+            if (target === 'boots') return ['FEET','BOOTS'];
+            if (target === 'main hand') return ['MAIN_HAND','MAINHAND'];
+            if (target === 'off hand') return ['OFF_HAND','OFFHAND'];
+            if (target === 'ranged weapon') return ['RANGED_WEAPON','RANGED'];
+            if (target === 'event item') return ['EVENT_ITEM','EVENTITEM'];
+            if (target === 'pocket 1') return ['POCKET1','POCKET_1'];
+            if (target === 'pocket 2') return ['POCKET2','POCKET_2'];
+            return [slotEnum].filter(Boolean);
+          })();
           const byId = new Map();
-          try {
-            const primary = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: slotEnum });
-            for (const n of (primary || [])) byId.set(String(n.id), n);
-          } catch {}
+          for (const sv of slotVariants) {
+            try {
+              const arr = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv });
+              for (const n of (arr || [])) byId.set(String(n.id), n);
+              // If we found items for one variant, we can continue to merge, or break early; keep merging to be safe
+            } catch (e) {
+              // invalid enum value or other error; try next variant
+              continue;
+            }
+          }
           // Include 2H for main hand visibility (many planners list 2H in main hand)
           if (target === 'main hand') {
             try {
@@ -693,10 +715,13 @@ export default function Planner({ variant = 'grid' }) {
           }
           // Fallback without career filter if results are unexpectedly sparse
           if (byId.size === 0) {
-            try {
-              const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: slotEnum, allowAnyName: true });
-              for (const n of (noCareer || [])) byId.set(String(n.id), n);
-            } catch {}
+            for (const sv of slotVariants) {
+              try {
+                const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true });
+                for (const n of (noCareer || [])) byId.set(String(n.id), n);
+                if (byId.size) break;
+              } catch {}
+            }
           }
           itemsRawCareer = Array.from(byId.values());
         }
@@ -710,11 +735,11 @@ export default function Planner({ variant = 'grid' }) {
           }
             if (raw === 'HEAD' || raw === 'HELM') return 'helm';
             if (raw === 'SHOULDER' || raw === 'SHOULDERS') return 'shoulders';
-            if (raw === 'BACK' || raw === 'CLOAK' || raw === 'CAPE') return 'cloak';
-            if (raw === 'BODY' || raw === 'CHEST') return 'body';
-            if (raw === 'GLOVES' || raw === 'HANDS') return 'gloves';
-            if (raw === 'BELT' || raw === 'WAIST') return 'belt';
-            if (raw === 'BOOTS' || raw === 'FEET') return 'boots';
+            if (raw === 'CLOAK' || raw === 'BACK' || raw === 'CAPE') return 'cloak';
+            if (raw === 'CHEST' || raw === 'BODY') return 'body';
+            if (raw === 'HANDS' || raw === 'GLOVES') return 'gloves';
+            if (raw === 'WAIST' || raw === 'BELT') return 'belt';
+            if (raw === 'FEET' || raw === 'BOOTS') return 'boots';
             if (raw === 'POCKET1') return 'pocket 1';
             if (raw === 'POCKET2') return 'pocket 2';
             if (raw === 'EVENT_ITEM') return 'event item';
@@ -733,7 +758,7 @@ export default function Planner({ variant = 'grid' }) {
               return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
             }
             // For non-jewelry slots, require exact mapping or exact raw enum
-            const allowed = new Set([slotEnum].filter(Boolean));
+            const allowed = new Set(slotVariants);
             if (target === 'main hand') allowed.add('TWO_HAND');
             const rawMatch = allowed.has(raw);
             return acceptable.includes(ns) || rawMatch;
