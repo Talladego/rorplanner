@@ -591,6 +591,9 @@ export default function Planner({ variant = 'grid' }) {
   const [filterStat, setFilterStat] = useState('');
   const [filterRarity, setFilterRarity] = useState('');
   const [filterSetOnly, setFilterSetOnly] = useState(false);
+  // Remember last-used filters separately for item and talisman pickers
+  const [lastItemFilters, setLastItemFilters] = useState({ name: '', stat: '', rarity: '', setOnly: false });
+  const [lastTalisFilters, setLastTalisFilters] = useState({ name: '', stat: '', rarity: '' });
   // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
   const [iconFallbacks] = useState(null); // no remote fallbacks on Pages
@@ -863,10 +866,11 @@ export default function Planner({ variant = 'grid' }) {
     setPickerIsTalis(true);
     setPickerTalisHost({ slotName: hostSlotName, index: i });
     setPickerSlot(`Talisman ${i + 1}`);
-  // Clear some filters for clarity when switching to talisman mode
-  setFilterName('');
-  setFilterStat('');
-  setFilterSetOnly(false);
+    // Restore last talisman filters
+    setFilterName(lastTalisFilters.name || '');
+    setFilterStat(lastTalisFilters.stat || '');
+    setFilterRarity(lastTalisFilters.rarity || '');
+    setFilterSetOnly(false);
     setPickerOpen(true);
   };
   const clearTalis = (hostSlotName, i) => {
@@ -917,7 +921,7 @@ export default function Planner({ variant = 'grid' }) {
         ]);
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
-        if (isTalisPicker) {
+  if (isTalisPicker) {
           // Fetch talisman items: most have slot 'TALISMAN' or type includes 'TALISMAN'.
           // We'll try by type first, then by slot if available.
           let byId = new Map();
@@ -993,6 +997,27 @@ export default function Planner({ variant = 'grid' }) {
                 })
                 .sort((a,b) => (Number(b?.itemLevel||b?.levelRequirement||0) - Number(a?.itemLevel||a?.levelRequirement||0)));
             } catch {}
+          }
+          // If saved talisman filters are too strict for this host, relax name/stat but keep rarity
+          if (items.length === 0 && (filterName || filterStat)) {
+            const itemsRelaxed = Array.from(byId.values())
+              .filter((n) => {
+                if (filterRarity) {
+                  const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
+                  if (r !== String(filterRarity).toUpperCase()) return false;
+                }
+                if (hostIlvl) {
+                  const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
+                  if (tMin && tMin > hostIlvl) return false;
+                }
+                const idStr = String(n?.id || '');
+                if (!idStr) return false;
+                if (excludeIds.has(idStr)) return false;
+                return true;
+              })
+              .sort((a,b) => (Number(b?.itemLevel||b?.levelRequirement||0) - Number(a?.itemLevel||a?.levelRequirement||0)));
+            if (!ignore) setPickerItems(itemsRelaxed);
+            return;
           }
           if (!ignore) setPickerItems(items);
           return;
@@ -1628,6 +1653,13 @@ export default function Planner({ variant = 'grid' }) {
         onClick={(e) => {
           const el = e.target.closest('.gear-slot');
           if (!el) return;
+          setPickerIsTalis(false);
+          setPickerTalisHost({ slotName: '', index: 0 });
+          // Restore last item filters
+          setFilterName(lastItemFilters.name || '');
+          setFilterStat(lastItemFilters.stat || '');
+          setFilterRarity(lastItemFilters.rarity || '');
+          setFilterSetOnly(!!lastItemFilters.setOnly);
           setPickerSlot(el.getAttribute('data-slotname'));
           setPickerOpen(true);
         }}
@@ -1647,7 +1679,15 @@ export default function Planner({ variant = 'grid' }) {
       </div>
     <ItemPicker
         open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        onClose={() => { 
+          // Save last-used filters per picker type
+          if (pickerIsTalis) {
+            setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
+          } else {
+            setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
+          }
+          setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 }); 
+        }}
         items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
   slotName={pickerIsTalis ? `${pickerSlot} (Talisman)` : pickerSlot}
         onPick={onPick}
@@ -1678,6 +1718,12 @@ export default function Planner({ variant = 'grid' }) {
           onClick={(e) => {
             const el = e.target.closest('.gear-slot');
             if (!el) return;
+            setPickerIsTalis(false);
+            setPickerTalisHost({ slotName: '', index: 0 });
+            setFilterName(lastItemFilters.name || '');
+            setFilterStat(lastItemFilters.stat || '');
+            setFilterRarity(lastItemFilters.rarity || '');
+            setFilterSetOnly(!!lastItemFilters.setOnly);
             setPickerSlot(el.getAttribute('data-slotname'));
             setPickerOpen(true);
           }}
@@ -1707,7 +1753,14 @@ export default function Planner({ variant = 'grid' }) {
         </div>
         <ItemPicker
           open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => { 
+            if (pickerIsTalis) {
+              setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
+            } else {
+              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
+            }
+            setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 }); 
+          }}
           items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
           slotName={pickerSlot}
           onPick={onPick}
@@ -1740,6 +1793,12 @@ export default function Planner({ variant = 'grid' }) {
           onClick={(e) => {
             const el = e.target.closest('.gear-slot');
             if (!el) return;
+            setPickerIsTalis(false);
+            setPickerTalisHost({ slotName: '', index: 0 });
+            setFilterName(lastItemFilters.name || '');
+            setFilterStat(lastItemFilters.stat || '');
+            setFilterRarity(lastItemFilters.rarity || '');
+            setFilterSetOnly(!!lastItemFilters.setOnly);
             setPickerSlot(el.getAttribute('data-slotname'));
             setPickerOpen(true);
           }}
@@ -1798,7 +1857,14 @@ export default function Planner({ variant = 'grid' }) {
         </div>
         <ItemPicker
           open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => { 
+            if (pickerIsTalis) {
+              setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
+            } else {
+              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
+            }
+            setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 }); 
+          }}
           items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
           slotName={pickerIsTalis ? `${pickerSlot} (Talisman)` : pickerSlot}
           onPick={onPick}
