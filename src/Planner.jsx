@@ -342,9 +342,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
               <option value="VERY_RARE">Very Rare</option>
               <option value="MYTHIC">Mythic</option>
             </select>
-            {(filterName || filterStat || filterRarity) && (
-              <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); }}>Clear</button>
-            )}
+            <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); }}>Clear</button>
           </div>
           {loading && <div>Loading…</div>}
           {error && <div style={{ color: 'crimson' }}>Failed to load items. {(error?.message || '').toString()}</div>}
@@ -385,8 +383,7 @@ export default function Planner({ variant = 'grid' }) {
   const [filterName, setFilterName] = useState('');
   const [filterStat, setFilterStat] = useState('');
   const [filterRarity, setFilterRarity] = useState('');
-  const [maxCareerRank, setMaxCareerRank] = useState(100);
-  const [maxRenownRank, setMaxRenownRank] = useState(100);
+  // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
   const [iconFallbacks, setIconFallbacks] = useState(null); // no remote fallbacks on Pages
   const [setsIndex, setSetsIndex] = useState(null); // no static sets index on Pages
@@ -453,11 +450,11 @@ export default function Planner({ variant = 'grid' }) {
     const canUse = (it) => {
       const det = it.details || {};
       // Exclude items above planner-entered caps
-      const il = Number(det?.itemLevel || it?.itemLevel || 0);
-      const reqLvlNum = Number(det?.levelRequirement || it?.levelRequirement || 0);
-      const reqRRNum = Number(det?.renownRankRequirement || it?.renownRankRequirement || det?.renownRank || 0);
-      if (reqLvlNum > maxCareerRank) return false;
-      if (reqRRNum > maxRenownRank) return false;
+  const il = Number(det?.itemLevel || it?.itemLevel || 0);
+  const reqLvlNum = Number(det?.levelRequirement || it?.levelRequirement || 0);
+  const reqRRNum = Number(det?.renownRankRequirement || it?.renownRankRequirement || det?.renownRank || 0);
+  if (reqLvlNum > careerRank) return false;
+  if (reqRRNum > renownRank) return false;
       // Career restriction must include selected career, if present
       if (Array.isArray(it.careerRestriction) && it.careerRestriction.length) {
         const want = String(career || '').toUpperCase();
@@ -518,7 +515,7 @@ export default function Planner({ variant = 'grid' }) {
       if (!prev) uniq.set(id, it);
     }
     return Array.from(uniq.values());
-  }, [allItems, pickerSlot, careerRank, renownRank, filterName, filterStat, filterRarity, maxCareerRank, maxRenownRank, career]);
+  }, [allItems, pickerSlot, careerRank, renownRank, filterName, filterStat, filterRarity, career]);
 
   const onPick = async (item) => {
     // Pre-validate: slot-locked jewelry and unique items
@@ -653,11 +650,11 @@ export default function Planner({ variant = 'grid' }) {
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
         // Fetch career-scoped; for jewelry, fetch with and without type filter and merge
-        let itemsRawCareer = [];
+  let itemsRawCareer = [];
         if (isJewelryTarget) {
           // Query specific accessory equip slots (JEWELLERY1..4) without name-based filters
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ career, perPage: 50, totalLimit: 400, slotEq: s, allowAnyName: true })));
+          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
           const byId = new Map();
           for (const arr of results) {
             for (const it of (arr || [])) byId.set(String(it.id), it);
@@ -681,7 +678,43 @@ export default function Planner({ variant = 'grid' }) {
             if (target === 'pocket 2') return 'POCKET2';
             return undefined;
           })();
-          itemsRawCareer = await fetchSovereignItems({ career, perPage: 50, totalLimit: 200, slotEq: slotEnum });
+          // Try a set of slot enum variants to be robust to schema changes
+          const slotVariants = (() => {
+            if (target === 'shoulders') return ['SHOULDER', 'SHOULDERS'];
+            if (target === 'main hand') return ['MAIN_HAND', 'MAINHAND'];
+            if (target === 'off hand') return ['OFF_HAND', 'OFFHAND'];
+            if (target === 'ranged weapon') return ['RANGED_WEAPON', 'RANGED'];
+            if (target === 'event item') return ['EVENT_ITEM', 'EVENTITEM'];
+            if (target === 'pocket 1') return ['POCKET1', 'POCKET_1'];
+            if (target === 'pocket 2') return ['POCKET2', 'POCKET_2'];
+            return [slotEnum];
+          })();
+          const byId = new Map();
+          // Primary fetch by slot variants with career filter
+          try {
+            const batches = await Promise.all(slotVariants.map(sv => fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: sv })));
+            for (const arr of batches) for (const n of (arr || [])) byId.set(String(n.id), n);
+          } catch {}
+          // Include 2H for main hand visibility (many planners list 2H in main hand)
+          if (target === 'main hand') {
+            try {
+              const twoHand = await fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: 'TWO_HAND' });
+              for (const n of (twoHand || [])) byId.set(String(n.id), n);
+            } catch {}
+          }
+          // Fallback without career filter if results are unexpectedly sparse
+          if (byId.size === 0) {
+            try {
+              const batchesNoCareer = await Promise.all(slotVariants.map(sv => fetchSovereignItems({ perPage: 100, totalLimit: 1000, slotEq: sv, allowAnyName: true })));
+              for (const arr of batchesNoCareer) for (const n of (arr || [])) byId.set(String(n.id), n);
+            } catch {}
+          }
+          // Merge an extra pass by name to pull in Sovereign items that might have slot enum variations
+          try {
+            const sov = await fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, nameContains: 'Sovereign' });
+            for (const n of (sov || [])) byId.set(String(n.id), n);
+          } catch {}
+          itemsRawCareer = Array.from(byId.values());
         }
         // Apply client-side slot filtering to handle naming differences (e.g., jewelry)
         const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
@@ -717,7 +750,7 @@ export default function Planner({ variant = 'grid' }) {
               if (target === 'gloves') return raw === 'GLOVES';
               if (target === 'belt') return raw === 'BELT';
               if (target === 'boots') return raw === 'BOOTS';
-              if (target === 'main hand') return raw === 'MAIN_HAND';
+              if (target === 'main hand') return raw === 'MAIN_HAND' || raw === 'TWO_HAND';
               if (target === 'off hand') return raw === 'OFF_HAND';
               if (target === 'ranged weapon') return raw === 'RANGED_WEAPON';
               if (target === 'event item') return raw === 'EVENT_ITEM';
@@ -731,8 +764,8 @@ export default function Planner({ variant = 'grid' }) {
             // Rank caps
             const reqLvlNum = Number(n?.levelRequirement || 0);
             const reqRRNum = Number(n?.renownRankRequirement || 0);
-            if (reqLvlNum > maxCareerRank) return false;
-            if (reqRRNum > maxRenownRank) return false;
+            if (reqLvlNum > careerRank) return false;
+            if (reqRRNum > renownRank) return false;
             // Name filter
             if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
             // Stat presence filter
@@ -773,7 +806,7 @@ export default function Planner({ variant = 'grid' }) {
         if (isJewelryTarget && items.length === 0) {
           // Retry without career; query accessory slots explicitly again
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ perPage: 50, totalLimit: 400, slotEq: s, allowAnyName: true })));
+          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
           const byId2 = new Map();
           for (const arr of results) for (const it of (arr || [])) byId2.set(String(it.id), it);
           const itemsRawAll = Array.from(byId2.values());
@@ -837,7 +870,7 @@ export default function Planner({ variant = 'grid' }) {
     }
     loadFromGraphQL();
     return () => { ignore = true; };
-  }, [pickerOpen, pickerSlot, career, renownRank, equipped, filterName, filterStat, filterRarity, maxCareerRank, maxRenownRank]);
+  }, [pickerOpen, pickerSlot, career, careerRank, renownRank, equipped, filterName, filterStat, filterRarity]);
 
   // Aggregate primary stats from equipped items and applicable set bonuses
   const totals = useMemo(() => {
@@ -1037,14 +1070,6 @@ export default function Planner({ variant = 'grid' }) {
         <input type="number" min={1} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
       </label>
       <button onClick={() => setEquipped({})}>Reset Gear</button>
-      <label>
-        Max Rank:
-        <input type="number" min={1} max={100} value={maxCareerRank} onChange={(e) => setMaxCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-      </label>
-      <label>
-        Max Renown:
-        <input type="number" min={0} max={100} value={maxRenownRank} onChange={(e) => setMaxRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-      </label>
     </div>
   );
 
