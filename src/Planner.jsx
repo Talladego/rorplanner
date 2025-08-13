@@ -127,23 +127,11 @@ let ICON_FALLBACKS_CACHE = null;
 function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid' }) {
   const tipClass = `gear-tooltip`;
   const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  const buildSummary = () => {
-    if (!item) return '';
-    const det = item.details || {};
-    const parts = [];
-    const armor = det.armor || det.kv?.Armor;
-    if (armor) parts.push(`Armor ${String(armor).replace(/[^0-9]/g, '')}`);
-    const flatStats = Array.isArray(det.stats) ? det.stats.filter((s) => s && s.unit !== '%' && typeof s.value === 'number' && s.stat) : [];
-    for (const s of flatStats.slice(0, 3)) {
-      parts.push(`+${s.value} ${s.stat}`);
-    }
-    return parts.join(', ');
-  };
   const buildTooltip = () => {
     if (!item) return null;
     const det = item.details || {};
   const rarity = String(item.rarity || det.rarity || '').toLowerCase();
-    const il = Number(det.itemLevel || item.itemLevel || 0) || null;
+  const itemLevelNum = Number(det.itemLevel || item.itemLevel || 0) || null;
     const slotLabel = item.slot || name;
     const armor = det.armor != null ? Number(String(det.armor).toString().match(/\d+/)?.[0] || 0) : null;
     const dps = det.dps != null ? Number(det.dps) : null;
@@ -169,11 +157,11 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
         </div>
         <div className="tooltip-body">
           {/* Unlabeled meta lines */}
-          {(slotLabel || det?.type || il) && (
+      {(slotLabel || det?.type || itemLevelNum) && (
             <div className="tooltip-section">
               {slotLabel ? <div>{slotLabel}</div> : null}
               {det?.type ? <div>{String(det.type).replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</div> : null}
-              {il ? <div>{il}</div> : null}
+        {itemLevelNum ? <div>{itemLevelNum}</div> : null}
             </div>
           )}
           {(typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0) ? (
@@ -294,8 +282,8 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
     return EMPTY_ICON;
   })();
   const itemLabel = item?.name || name;
-  const summaryText = buildSummary();
-  const titleText = item ? (summaryText ? `${itemLabel} — ${summaryText}` : itemLabel) : itemLabel;
+  // const summaryText = buildSummary(); // currently unused
+  // const titleText = item ? (summaryText ? `${itemLabel} — ${summaryText}` : itemLabel) : itemLabel; // not used, keep for potential future aria-label
   const rarityStr = String(item?.rarity || item?.details?.rarity || '').toLowerCase();
   const isSet = !!(item?.details?.set?.name || item?.details?.itemSet?.name);
   const rarityClass = isSet ? 'name-set' : (rarityStr ? `rarity-${rarityStr}` : '');
@@ -304,7 +292,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   <div className={variant === 'classic' ? 'classic-slot' : 'ror-slot'} style={gridArea ? { gridArea } : undefined}>
     {variant === 'classic' && (<div className="slot-label">{name}</div>)}
         {variant === 'ror' ? (() => {
-          const lvl = Number(item?.details?.itemLevel || item?.itemLevel || 0) || null;
+          const lvl = Number(item?.details?.itemLevel || item?.itemLevel || 0) || 0;
           const rightLines = item
             ? [
                 String(itemLabel || '').trim() || name,
@@ -482,7 +470,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
 export default function Planner({ variant = 'grid' }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
-  const [allItems, setAllItems] = useState([]); // legacy; no static preload
+  const [allItems] = useState([]); // legacy; no static preload
   const [career, setCareer] = useState(DEFAULT_CAREER);
   const [careerRank, setCareerRank] = useState(40);
   const [renownRank, setRenownRank] = useState(80);
@@ -492,8 +480,8 @@ export default function Planner({ variant = 'grid' }) {
   const [filterSetOnly, setFilterSetOnly] = useState(false);
   // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
-  const [iconFallbacks, setIconFallbacks] = useState(null); // no remote fallbacks on Pages
-  const [setsIndex, setSetsIndex] = useState(null); // no static sets index on Pages
+  const [iconFallbacks] = useState(null); // no remote fallbacks on Pages
+  const [setsIndex] = useState(null); // no static sets index on Pages
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState(null);
@@ -515,7 +503,7 @@ export default function Planner({ variant = 'grid' }) {
           return;
         }
       }
-    } catch {}
+  } catch { /* ignore load error */ }
     setEquipped({});
   }, [career]);
 
@@ -523,7 +511,7 @@ export default function Planner({ variant = 'grid' }) {
   useEffect(() => {
     try {
       localStorage.setItem(`equipped:${career}`, JSON.stringify(equipped || {}));
-    } catch {}
+  } catch { /* ignore save error */ }
   }, [equipped, career]);
 
   const filteredItems = useMemo(() => {
@@ -556,8 +544,7 @@ export default function Planner({ variant = 'grid' }) {
     // Parse numeric rank requirements from details if present
     const canUse = (it) => {
       const det = it.details || {};
-      // Exclude items above planner-entered caps
-  const il = Number(det?.itemLevel || it?.itemLevel || 0);
+  // Exclude items above planner-entered caps
   const reqLvlNum = Number(det?.levelRequirement || it?.levelRequirement || 0);
   const reqRRNum = Number(det?.renownRankRequirement || it?.renownRankRequirement || det?.renownRank || 0);
   if (reqLvlNum > careerRank) return false;
@@ -806,6 +793,7 @@ export default function Planner({ variant = 'grid' }) {
             if (target === 'pocket 2') return 'POCKET2';
             return undefined;
           })();
+          void slotEnum; // silence unused var; kept for clarity
           // Try likely slot enum variants sequentially; skip invalid enum errors
           const byId = new Map();
           for (const sv of slotVariants) {
@@ -813,7 +801,7 @@ export default function Planner({ variant = 'grid' }) {
               const arr = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (arr || [])) byId.set(String(n.id), n);
               // If we found items for one variant, we can continue to merge, or break early; keep merging to be safe
-            } catch (e) {
+            } catch {
               // invalid enum value or other error; try next variant
               continue;
             }
@@ -823,7 +811,7 @@ export default function Planner({ variant = 'grid' }) {
             try {
               const twoHand = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: 'TWO_HAND', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
               for (const n of (twoHand || [])) byId.set(String(n.id), n);
-            } catch {}
+            } catch { /* ignore TWO_HAND fetch issues */ }
           }
           // Fallback without career filter if results are unexpectedly sparse
           if (byId.size === 0) {
@@ -832,7 +820,7 @@ export default function Planner({ variant = 'grid' }) {
                 const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
                 for (const n of (noCareer || [])) byId.set(String(n.id), n);
                 if (byId.size) break;
-              } catch {}
+              } catch { /* ignore no-career fetch issues */ }
             }
           }
           itemsRawCareer = Array.from(byId.values());
@@ -952,7 +940,6 @@ export default function Planner({ variant = 'grid' }) {
           }
         }
   if (import.meta && import.meta.env && import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
           const expectedEnum = (() => {
             const t = target;
             if (t === 'helm') return ['HELM'];
@@ -972,13 +959,14 @@ export default function Planner({ variant = 'grid' }) {
             : 0;
           const careerWanted = String(career || '').toUpperCase();
           const careerMismatches = items.filter(it => Array.isArray(it.careerRestriction) && it.careerRestriction.length && !it.careerRestriction.includes(careerWanted)).length;
+          // debug only in dev
           console.debug('[Picker]', pickerSlot, 'raw=', (itemsRawCareer||[]).length, 'final=', items.length, 'slot-mismatch=', mismatchedSlot, 'career-mismatch=', careerMismatches);
         }
         if (!ignore) {
           setPickerItems(items || []);
         }
       } catch (e) {
-        if (!ignore) setPickerError(e);
+  if (!ignore) setPickerError(e);
       } finally {
         if (!ignore) setPickerLoading(false);
       }
@@ -1358,7 +1346,7 @@ export default function Planner({ variant = 'grid' }) {
   );
 
   const renderClassic = () => {
-    const byName = Object.fromEntries(slots.map(s => [s.name, s]));
+  // const byName = Object.fromEntries(slots.map(s => [s.name, s]));
   const leftArmorOrder = ['Helm', 'Shoulders', 'Cloak', 'Body', 'Gloves', 'Belt', 'Boots'];
     const jewelOrder = ['Jewelry Slot 1', 'Jewelry Slot 2', 'Jewelry Slot 3', 'Jewelry Slot 4'];
     const bottomWeapons = ['Main Hand', 'Off Hand', 'Ranged Weapon'];
@@ -1375,13 +1363,9 @@ export default function Planner({ variant = 'grid' }) {
         >
           {Toolbar}
           <div className="classic-gear-left">
-            {leftArmorOrder.map((name) => {
-              const s = byName[name];
-              if (!s) return null;
-              return (
-                <GearSlot key={name} name={name} gridArea={undefined} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
-              );
-            })}
+            {leftArmorOrder.map((name) => (
+              <GearSlot key={name} name={name} gridArea={undefined} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
           </div>
           <div className="classic-doll" />
           <div className="classic-jewels">
@@ -1422,7 +1406,7 @@ export default function Planner({ variant = 'grid' }) {
   };
 
   const renderRor = () => {
-    const byName = Object.fromEntries(slots.map(s => [s.name, s]));
+    // const byName = Object.fromEntries(slots.map(s => [s.name, s]));
   const leftArmorOrder = ['Helm', 'Shoulders', 'Cloak', 'Body', 'Gloves', 'Belt', 'Boots'];
   const midOrder = ['Main Hand', 'Off Hand', 'Ranged Weapon', 'Event Item', 'Pocket 1', 'Pocket 2'];
     const jewelOrder = ['Jewelry Slot 1', 'Jewelry Slot 2', 'Jewelry Slot 3', 'Jewelry Slot 4'];

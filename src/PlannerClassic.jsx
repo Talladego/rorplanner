@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import './PlannerClassic.css';
 import Planner from './Planner';
 
@@ -8,6 +7,5 @@ import Planner from './Planner';
 export default function PlannerClassic() {
   // For now, just reuse Planner and style the container similarly to classic layout.
   // This avoids duplicating all the data and picker logic.
-  const [mounted] = useState(true);
   return <Planner variant="classic" />;
 }

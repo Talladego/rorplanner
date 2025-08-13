@@ -14,7 +14,7 @@ async function post(query, variables) {
     body: JSON.stringify({ query, variables })
   });
   let json = {};
-  try { json = await res.json(); } catch {}
+  try { json = await res.json(); } catch { /* non-JSON response */ }
   if (!res.ok || (json && json.errors)) {
     const firstErr = json?.errors?.[0];
     const msg = (firstErr && (firstErr.message || firstErr.extensions?.message)) || `HTTP ${res.status}`;
@@ -55,7 +55,9 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   // Helper to page through results with current usable flag
   async function pageAll(usableOverride) {
     after = undefined;
-    do {
+    // loop while hasNext to avoid constant-condition warning
+    let hasNext = true;
+    while (hasNext) {
       let data;
       try {
         data = await post(q, { first: currentFirst, after, where, usableByCareer: usableOverride });
@@ -70,9 +72,9 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
       const conn = data?.items;
       const edges = conn?.edges || [];
       for (const e of edges) out.push(e.node);
-      if (!conn?.pageInfo?.hasNextPage || out.length >= totalLimit) break;
-      after = conn.pageInfo.endCursor || undefined;
-    } while (true);
+      hasNext = !!(conn?.pageInfo?.hasNextPage) && out.length < totalLimit;
+      after = hasNext ? (conn.pageInfo.endCursor || undefined) : undefined;
+    }
   }
   // First try with usableByCareer if provided; if nothing came back, retry without it
   await pageAll(usableCareer);

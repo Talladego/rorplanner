@@ -1,3 +1,5 @@
+/* eslint-env node */
+import process from 'node:process';
 import fetch from 'node-fetch';
 
 const ENDPOINT = 'https://production-api.waremu.com/graphql';
@@ -38,15 +40,16 @@ async function searchAnnulus(limit=100) {
   let after;
   let got = 0;
   const pageSize = 50;
-  do {
+  let hasNext = true;
+  while (hasNext) {
     const data = await post(q, { first: pageSize, after, where: { name: { contains: 'Annulus' } } });
     const conn = data?.items;
     const nodes = (conn?.edges||[]).map(e=>e.node);
     out.push(...nodes);
     got += nodes.length;
-    if (!conn?.pageInfo?.hasNextPage || got >= limit) break;
-    after = conn.pageInfo.endCursor;
-  } while(true);
+    hasNext = !!(conn?.pageInfo?.hasNextPage) && got < limit;
+    after = hasNext ? conn.pageInfo.endCursor : undefined;
+  }
   return out;
 }
 

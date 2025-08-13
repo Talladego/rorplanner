@@ -1,3 +1,5 @@
+/* eslint-env node */
+import process from 'node:process';
 import fetch from 'node-fetch';
 import fs from 'fs/promises';
 import path from 'path';
@@ -34,14 +36,15 @@ async function fetchBySlot(slot, limit = 2000) {
   const where = { slot: { eq: slot } };
   const out = [];
   let after = undefined;
-  do {
-  const data = await post(q, { first: 50, after: after || null, where });
+  let hasNext = true;
+  while (hasNext) {
+    const data = await post(q, { first: 50, after: after || null, where });
     const conn = data?.items;
     const edges = conn?.edges || [];
     for (const e of edges) out.push(e.node);
-    if (!conn?.pageInfo?.hasNextPage || out.length >= limit) break;
-    after = conn.pageInfo.endCursor || undefined;
-  } while (true);
+    hasNext = !!(conn?.pageInfo?.hasNextPage) && out.length < limit;
+    after = hasNext ? (conn.pageInfo.endCursor || undefined) : undefined;
+  }
   return out;
 }
 
