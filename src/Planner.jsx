@@ -301,7 +301,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   const rarityClass = isSet ? 'name-set' : (rarityStr ? `rarity-${rarityStr}` : '');
   if (variant !== 'grid') {
     return (
-      <div className={variant === 'classic' ? 'classic-slot' : 'ror-slot'} style={gridArea ? { gridArea } : undefined}>
+  <div className={variant === 'classic' ? 'classic-slot' : 'ror-slot'} style={gridArea ? { gridArea } : undefined}>
     {variant === 'classic' && (<div className="slot-label">{name}</div>)}
         {variant === 'ror' ? (() => {
           const lvl = Number(item?.details?.itemLevel || item?.itemLevel || 0) || null;
@@ -314,11 +314,11 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
             : [name];
           return (
             <div className="slot-row">
-      <div className="gear-slot" data-slotname={name} title={titleText} aria-label={titleText}>
+      <div className="gear-slot" data-slotname={name} aria-label={itemLabel}>
                 <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
                 <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
               </div>
-        <div className="item-label-right" title={item ? `${itemLabel} — ${name}${lvl ? ` — iLvl ${lvl}` : ''}` : name}>
+        <div className="item-label-right">
                 {rightLines.map((ln, idx) => (
           <span key={idx} className={idx === 0 ? `line name-line ${rarityClass}` : 'line meta-line'}>{ln}</span>
                 ))}
@@ -326,7 +326,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
             </div>
           );
         })() : (
-      <div className="gear-slot" data-slotname={name} title={titleText} aria-label={titleText}>
+      <div className="gear-slot" data-slotname={name} aria-label={itemLabel}>
             <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
             <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
           </div>
@@ -335,7 +335,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
     );
   }
   return (
-    <div className="gear-slot" style={{ gridArea }} data-slotname={name} title={titleText} aria-label={titleText}>
+    <div className="gear-slot" style={{ gridArea }} data-slotname={name} aria-label={itemLabel}>
       <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
       <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
   <div className={`gear-label ${rarityClass}`}>{itemLabel}</div>
@@ -345,6 +345,57 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
 
 function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly }) {
   if (!open) return null;
+  const fmt = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const renderTooltip = (it) => {
+    if (!it) return null;
+    const rarity = String(it.rarity || it?.details?.rarity || '').toLowerCase();
+    const il = Number(it.itemLevel || it?.details?.itemLevel || 0) || null;
+    const armor = typeof it.armor === 'number' ? it.armor : (typeof it?.details?.armor === 'number' ? it.details.armor : null);
+    const dps = typeof it.dps === 'number' ? it.dps : (typeof it?.details?.dps === 'number' ? it.details.dps : null);
+    const speed = typeof it.speed === 'number' ? it.speed : (typeof it?.details?.speed === 'number' ? it.details.speed : null);
+    const stats = Array.isArray(it.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+    const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
+    return (
+      <div className={`gear-tooltip`}>
+        <div className={`tooltip-card ${rarity ? 'rarity-' + rarity : ''}`} role="tooltip">
+          <div className="tooltip-header">
+            <img className="tooltip-icon" src={icon} alt="" />
+            <div>
+              <div className={`tooltip-name${it?.itemSet?.name || it?.details?.set?.name ? ' name-set' : ''}`}>{it.name}</div>
+            </div>
+          </div>
+          <div className="tooltip-body">
+            {(it.slot || il) && (
+              <div className="tooltip-section">
+                {it.slot ? <div>{fmt(it.slot)}</div> : null}
+                {il ? <div>{il}</div> : null}
+              </div>
+            )}
+            {(typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0) ? (
+              <div className="tooltip-section">
+                <div className="section-title">Stats</div>
+                <ul className="stat-list">
+                  {typeof armor === 'number' && armor > 0 ? (
+                    <li className="stat-line"><span className="val" style={{ minWidth: 0, textAlign: 'left' }}>{armor}</span><span className="label">Armor</span></li>
+                  ) : null}
+                  {typeof dps === 'number' && dps > 0 ? (
+                    <li className="stat-line"><span className="val" style={{ minWidth: 0, textAlign: 'left' }}>{dps.toFixed(2)}{typeof speed === 'number' && speed > 0 ? ` (Speed ${speed.toFixed(2)})` : ''}</span><span className="label">DPS</span></li>
+                  ) : null}
+                  {stats.map((s, i) => (
+                    <li key={i} className="stat-line">
+                      <span className="plus">+</span>
+                      <span className="val">{typeof s.value === 'number' ? s.value : ''}{s.percentage || s.unit === '%' ? '%' : ''}</span>
+                      <span className="label">{fmt(s.stat || s.name || s.type)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -400,13 +451,23 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
     const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
     const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
+    const il = Number(it?.itemLevel || it?.details?.itemLevel || 0) || null;
+    const setName = it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name || '';
+    const setBonuses = (it?.itemSet?.bonuses || [])
+      .map(b => typeof b?.itemsRequired === 'number' ? b.itemsRequired : 0);
+    const setPieces = setBonuses.length ? Math.max(...setBonuses) : null;
         return (
                   <button key={it.id} className="item-row" onClick={() => onPick(it)}>
                     <span className="item-left">
                       <img className="item-icon" src={icon} alt="" />
           <span className={`item-name ${rarityClass}`}>{it.name}</span>
+          <span className="item-meta">
+            {il ? <span className="meta-il">iLvl {il}</span> : null}
+            {isSet && setName ? <span className="meta-set">Set: {setName}{setPieces ? ` (${setPieces}pc)` : ''}</span> : null}
+          </span>
                     </span>
-                    <span className="item-slot">{it.slot || ''}</span>
+                    <span className="item-slot">{fmt(it.slot || '')}</span>
+            {renderTooltip(it)}
                   </button>
                 );
               })}
