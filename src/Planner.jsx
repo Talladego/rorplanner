@@ -127,6 +127,19 @@ let ICON_FALLBACKS_CACHE = null;
 function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid', talisCount = 0, talismans = [], onTalisPick, onTalisClear }) {
   const tipClass = `gear-tooltip`;
   const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const buildEmptyTalisTooltip = () => (
+    <div className={`tooltip-card`} role="tooltip">
+      <div className="tooltip-header">
+        <img className="tooltip-icon" src={'https://armory.returnofreckoning.com/item/1'} alt="" />
+        <div>
+          <div className="tooltip-name">Empty Talisman Slot</div>
+        </div>
+      </div>
+      <div className="tooltip-body">
+        <div className="tooltip-section"><div>Click to choose a talisman</div></div>
+      </div>
+    </div>
+  );
   const buildTooltip = () => {
     if (!item) return null;
     const det = item.details || {};
@@ -193,7 +206,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
                   const t = Array.isArray(talismans) ? talismans[i] : null;
                   if (t) {
                     const tdet = t.details || {};
-                    const ticon = t.iconUrl || tdet.iconUrl || (tdet.iconId ? `https://armory.returnofreckoning.com/item/${tdet.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+                    const ticon = tdet.iconUrl || t.iconUrl || (tdet.iconId ? `https://armory.returnofreckoning.com/item/${tdet.iconId}` : 'https://armory.returnofreckoning.com/item/1');
                     const tstats = Array.isArray(tdet.stats) ? tdet.stats : (Array.isArray(t.stats) ? t.stats : []);
                     return (
                       <div key={i} className="talis-line">
@@ -212,7 +225,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
                       </div>
                     );
                   }
-                  return (<div key={i} className="talis-line"><img className="talis-icon" src={'https://armory.returnofreckoning.com/icon/1'} alt="" /> Empty Talisman Slot</div>);
+                  return (<div key={i} className="talis-line"><img className="talis-icon" src={'https://armory.returnofreckoning.com/item/1'} alt="" /> Empty Talisman Slot</div>);
                 })}
               </div>
             </div>
@@ -374,11 +387,11 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
                 <div className="talis-row">
                   {Array.from({ length: talisCount }).map((_, i) => {
                     const t = talismans?.[i] || null;
-                    const tIcon = t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+                    const tIcon = t?.details?.iconUrl || t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
                     return (
                       <div key={i} className={`talis-slot${t ? ' filled' : ''}`} data-slotname={`${name}::talis::${i}`} onClick={(e) => { e.stopPropagation(); onTalisPick?.(name, i); }}>
-                        {t ? <img className="talis-icon-small" src={tIcon} alt="" /> : null}
-                        {t ? <div className={tipClass}>{buildTalisTooltip(t)}</div> : null}
+                        <img className="talis-icon-small" src={t ? tIcon : 'https://armory.returnofreckoning.com/item/1'} alt="" />
+                        <div className={tipClass}>{t ? buildTalisTooltip(t) : buildEmptyTalisTooltip()}</div>
                         {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
                       </div>
                     );
@@ -405,11 +418,11 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
         <div className="talis-row" onClick={(e) => e.stopPropagation()}>
           {Array.from({ length: talisCount }).map((_, i) => {
             const t = talismans?.[i] || null;
-            const tIcon = t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+            const tIcon = t?.details?.iconUrl || t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
             return (
               <div key={i} className={`talis-slot${t ? ' filled' : ''}`} onClick={() => onTalisPick?.(name, i)}>
-                {t ? <img className="talis-icon-small" src={tIcon} alt="" /> : null}
-                {t ? <div className={tipClass}>{buildTalisTooltip(t)}</div> : null}
+                <img className="talis-icon-small" src={t ? tIcon : 'https://armory.returnofreckoning.com/item/1'} alt="" />
+                <div className={tipClass}>{t ? buildTalisTooltip(t) : buildEmptyTalisTooltip()}</div>
                 {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
               </div>
             );
