@@ -43,30 +43,40 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   if (slotEq) {
     where.slot = { eq: toEnum(slotEq) };
   }
-  // Disable server-side career filter to avoid missing items; filter by career client-side
-  const usable = undefined;
-  const out = [];
+  // Use server-side career filter when provided; we will fallback without it if needed
+  const usableCareer = career ? toEnum(career) : undefined;
+  let out = [];
   let after = undefined;
   let currentFirst = Math.max(1, Math.min(Number(perPage) || 50, 50));
   // Fetch pages, reducing page size if server enforces a lower maximum
-  do {
-    let data;
-    try {
-      data = await post(q, { first: currentFirst, after, where, usableByCareer: usable });
-    } catch (err) {
-      const msg = String(err?.message || '');
-      if (/maximum allowed items per page/i.test(msg) && currentFirst > 1) {
-        currentFirst = Math.max(1, Math.floor(currentFirst / 2));
-        continue; // retry with smaller page size
+  // Helper to page through results with current usable flag
+  async function pageAll(usableOverride) {
+    after = undefined;
+    do {
+      let data;
+      try {
+        data = await post(q, { first: currentFirst, after, where, usableByCareer: usableOverride });
+      } catch (err) {
+        const msg = String(err?.message || '');
+        if (/maximum allowed items per page/i.test(msg) && currentFirst > 1) {
+          currentFirst = Math.max(1, Math.floor(currentFirst / 2));
+          continue; // retry with smaller page size
+        }
+        throw err;
       }
-      throw err;
-    }
-    const conn = data?.items;
-    const edges = conn?.edges || [];
-    for (const e of edges) out.push(e.node);
-    if (!conn?.pageInfo?.hasNextPage || out.length >= totalLimit) break;
-    after = conn.pageInfo.endCursor || undefined;
-  } while (true);
+      const conn = data?.items;
+      const edges = conn?.edges || [];
+      for (const e of edges) out.push(e.node);
+      if (!conn?.pageInfo?.hasNextPage || out.length >= totalLimit) break;
+      after = conn.pageInfo.endCursor || undefined;
+    } while (true);
+  }
+  // First try with usableByCareer if provided; if nothing came back, retry without it
+  await pageAll(usableCareer);
+  if (career && out.length === 0) {
+    out = [];
+    await pageAll(undefined);
+  }
   return out;
 }
 
