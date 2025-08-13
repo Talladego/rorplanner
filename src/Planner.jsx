@@ -398,7 +398,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   );
 }
 
-function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly }) {
+function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly, isTalis = false }) {
   if (!open) return null;
   const fmt = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const statOptions = useMemo(() => {
@@ -496,10 +496,12 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
               <option value="VERY_RARE">Very Rare</option>
               <option value="MYTHIC">Mythic</option>
             </select>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <input type="checkbox" checked={!!filterSetOnly} onChange={(e) => setFilterSetOnly(e.target.checked)} />
-              Set items only
-            </label>
+            {!isTalis && (
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <input type="checkbox" checked={!!filterSetOnly} onChange={(e) => setFilterSetOnly(e.target.checked)} />
+                Set items only
+              </label>
+            )}
             <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); setFilterSetOnly(false); }}>Clear</button>
           </div>
           {loading && <div>Loading…</div>}
@@ -508,8 +510,8 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
             <div>No items found.</div>
           )}
           {!loading && !error && items && items.length > 0 && (
-            <div className="item-list">
-      {(items.filter(it => !filterSetOnly || !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name))).map((it) => {
+    <div className="item-list">
+  {(items.filter(it => isTalis || !filterSetOnly || !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name))).map((it) => {
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
     const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
     const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
@@ -1596,7 +1598,7 @@ export default function Planner({ variant = 'grid' }) {
         })}
   <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
       </div>
-      <ItemPicker
+    <ItemPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
@@ -1612,6 +1614,7 @@ export default function Planner({ variant = 'grid' }) {
   setFilterRarity={setFilterRarity}
   filterSetOnly={filterSetOnly}
   setFilterSetOnly={setFilterSetOnly}
+  isTalis={pickerIsTalis}
       />
     </div>
   );
@@ -1671,6 +1674,7 @@ export default function Planner({ variant = 'grid' }) {
           setFilterRarity={setFilterRarity}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
+          isTalis={pickerIsTalis}
         />
       </div>
     );
@@ -1761,6 +1765,7 @@ export default function Planner({ variant = 'grid' }) {
           setFilterRarity={setFilterRarity}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
+          isTalis={pickerIsTalis}
         />
       </div>
     );
