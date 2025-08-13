@@ -35,7 +35,15 @@ async function main() {
     console.log('No --id provided');
     process.exit(1);
   }
-  const q = `query($id:ID!){ item(id:$id){ id name type slot rarity levelRequirement itemLevel talismanSlots } }`;
+  const q = `query($id:ID!){
+    item(id:$id){
+      id name description type slot rarity levelRequirement itemLevel talismanSlots iconUrl
+      stats { stat value percentage }
+      itemSet { id name level bonuses { itemsRequired bonus { __typename ... on ItemStat { stat value percentage } ... on Ability { id name description } } } }
+      abilities { id name description }
+      buffs { id name description }
+    }
+  }`;
   for (const id of ids) {
     try {
       const data = await post(q, { id: String(id) });

@@ -371,11 +371,13 @@
 .stats-lines .stats-line:nth-child(odd) { background: rgba(255,255,255,0.03); border-radius: 4px; padding: 3px 6px; }
 .stats-lines .stats-line:nth-child(even) { background: rgba(0,0,0,0.08); border-radius: 4px; padding: 3px 6px; }
 
-/* Talisman inline mini-slots to the right of gear slot */
+/* Talisman mini-slots anchored to gear bottom-right, below label */
 .talis-row {
+  position: absolute;
+  bottom: -24px; /* place below the gear label */
+  right: 0;
   display: inline-flex;
   gap: 4px;
-  margin-left: 8px;
 }
 .talis-slot {
   position: relative;
@@ -411,3 +413,34 @@
   display: none;
 }
 .talis-slot.filled:hover .talis-clear { display: block; }
+
+/* Legendary talisman support badges */
+.legendary-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  z-index: 2;
+  background: linear-gradient(135deg, #f2c14e, #d4a12e);
+  color: #1a1405;
+  border: 1px solid #8a6b1a;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+.legendary-chip {
+  display: inline-block;
+  background: linear-gradient(135deg, #f2c14e, #d4a12e);
+  color: #1a1405;
+  border: 1px solid #8a6b1a;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  margin-left: 8px;
+  text-transform: uppercase;
+}
