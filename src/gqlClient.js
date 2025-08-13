@@ -27,7 +27,7 @@ function toEnum(val) {
   return String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
-export async function fetchSovereignItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq }) {
+export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq }) {
   const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career){
     items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer){
       edges{ node{ id name description type slot levelRequirement itemLevel renownRankRequirement iconUrl talismanSlots rarity uniqueEquipped careerRestriction itemSet{ id name } stats { stat value percentage } } }

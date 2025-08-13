@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchSovereignItems, fetchItemDetails } from './gqlClient';
+import { fetchItems, fetchItemDetails } from './gqlClient';
 import './Planner.css';
 import { CAREERS, DEFAULT_CAREER } from './config';
 
@@ -610,7 +610,7 @@ export default function Planner({ variant = 'grid' }) {
     }
   };
 
-  // When opening the picker, fetch Sovereign items for that slot and career via GraphQL
+  // When opening the picker, fetch items for that slot and career via GraphQL
   useEffect(() => {
     let ignore = false;
     async function loadFromGraphQL() {
@@ -654,7 +654,7 @@ export default function Planner({ variant = 'grid' }) {
         if (isJewelryTarget) {
           // Query specific accessory equip slots (JEWELLERY1..4) without name-based filters
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
+          const results = await Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
           const byId = new Map();
           for (const arr of results) {
             for (const it of (arr || [])) byId.set(String(it.id), it);
@@ -692,28 +692,23 @@ export default function Planner({ variant = 'grid' }) {
           const byId = new Map();
           // Primary fetch by slot variants with career filter
           try {
-            const batches = await Promise.all(slotVariants.map(sv => fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: sv })));
+            const batches = await Promise.all(slotVariants.map(sv => fetchItems({ career, perPage: 100, totalLimit: 1000, slotEq: sv })));
             for (const arr of batches) for (const n of (arr || [])) byId.set(String(n.id), n);
           } catch {}
           // Include 2H for main hand visibility (many planners list 2H in main hand)
           if (target === 'main hand') {
             try {
-              const twoHand = await fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, slotEq: 'TWO_HAND' });
+              const twoHand = await fetchItems({ career, perPage: 100, totalLimit: 1000, slotEq: 'TWO_HAND' });
               for (const n of (twoHand || [])) byId.set(String(n.id), n);
             } catch {}
           }
           // Fallback without career filter if results are unexpectedly sparse
           if (byId.size === 0) {
             try {
-              const batchesNoCareer = await Promise.all(slotVariants.map(sv => fetchSovereignItems({ perPage: 100, totalLimit: 1000, slotEq: sv, allowAnyName: true })));
+              const batchesNoCareer = await Promise.all(slotVariants.map(sv => fetchItems({ perPage: 100, totalLimit: 1000, slotEq: sv, allowAnyName: true })));
               for (const arr of batchesNoCareer) for (const n of (arr || [])) byId.set(String(n.id), n);
             } catch {}
           }
-          // Merge an extra pass by name to pull in Sovereign items that might have slot enum variations
-          try {
-            const sov = await fetchSovereignItems({ career, perPage: 100, totalLimit: 1000, nameContains: 'Sovereign' });
-            for (const n of (sov || [])) byId.set(String(n.id), n);
-          } catch {}
           itemsRawCareer = Array.from(byId.values());
         }
         // Apply client-side slot filtering to handle naming differences (e.g., jewelry)
@@ -806,7 +801,7 @@ export default function Planner({ variant = 'grid' }) {
         if (isJewelryTarget && items.length === 0) {
           // Retry without career; query accessory slots explicitly again
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
+          const results = await Promise.all(slotsToTry.map(s => fetchItems({ perPage: 100, totalLimit: 1000, slotEq: s, allowAnyName: true })));
           const byId2 = new Map();
           for (const arr of results) for (const it of (arr || [])) byId2.set(String(it.id), it);
           const itemsRawAll = Array.from(byId2.values());
@@ -822,7 +817,7 @@ export default function Planner({ variant = 'grid' }) {
           // Final fallback: fetch any by slot without name filter
           if (items.length === 0) {
             const anyById = new Map();
-            const more = await Promise.all(slotsToTry.map(s => fetchSovereignItems({ career, perPage: 50, totalLimit: 400, slotEq: s, allowAnyName: true })));
+            const more = await Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 400, slotEq: s, allowAnyName: true })));
             for (const arr of more) for (const it of (arr || [])) anyById.set(String(it.id), it);
             const anyItems = Array.from(anyById.values());
             items = (anyItems || [])
