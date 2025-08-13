@@ -1,0 +1,147 @@
+{
+  "id": "435234",
+  "probe": {
+    "success": true,
+    "via": "item(id: ID!)",
+    "data": {
+      "item": {
+        "id": "435234",
+        "name": "Sovereign Shinsteels of the Pridelord"
+      }
+    }
+  },
+  "detail": {
+    "via": "item",
+    "node": {
+      "id": "435234",
+      "name": "Sovereign Shinsteels of the Pridelord",
+      "description": "Requires the Invader's Ward to equip.",
+      "type": "MEDIUM_ARMOR",
+      "slot": "BOOTS",
+      "rarity": "VERY_RARE",
+      "armor": 494,
+      "dps": 0,
+      "speed": 0,
+      "levelRequirement": 40,
+      "renownRankRequirement": 76,
+      "itemLevel": 76,
+      "uniqueEquipped": false,
+      "careerRestriction": [
+        "WHITE_LION"
+      ],
+      "raceRestriction": [],
+      "iconUrl": "https://armory.returnofreckoning.com/item/8195",
+      "talismanSlots": 1,
+      "stats": [
+        {
+          "stat": "STRENGTH",
+          "value": 26,
+          "percentage": false
+        },
+        {
+          "stat": "INITIATIVE",
+          "value": 25,
+          "percentage": false
+        },
+        {
+          "stat": "DISRUPT",
+          "value": 2,
+          "percentage": false
+        },
+        {
+          "stat": "MORALE_REGEN",
+          "value": 3,
+          "percentage": false
+        }
+      ],
+      "itemSet": {
+        "id": "4490",
+        "name": "King's Ransom Lionmark Kit",
+        "level": 65,
+        "bonuses": [
+          {
+            "itemsRequired": 2,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "STRENGTH",
+              "value": 80,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 3,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "WOUNDS",
+              "value": 88,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 4,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "ARMOR_PENETRATION",
+              "value": 6,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 5,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "MELEE_CRIT_RATE",
+              "value": 6,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 6,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "MASTERY_1_BONUS",
+              "value": 2,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 7,
+            "bonus": {
+              "__typename": "Ability",
+              "id": "28408",
+              "description": "Vulnerability - On Hit: 10% chance to increase target's chance to be critically hit by 7% for 10 seconds."
+            }
+          },
+          {
+            "itemsRequired": 8,
+            "bonus": {
+              "__typename": "Ability",
+              "id": "28202",
+              "description": "Gain ability: Desolation"
+            }
+          }
+        ]
+      },
+      "abilities": [],
+      "buffs": [
+        {
+          "id": "1137",
+          "name": "Invader Ward",
+          "description": "Requires Invader's Ward to Equip."
+        }
+      ],
+      "rewardedFromQuests": {
+        "edges": []
+      },
+      "rewardedFromChapters": {
+        "edges": []
+      },
+      "dropsFromCreatures": {
+        "edges": []
+      },
+      "dropsFromGameObjects": {
+        "edges": []
+      }
+    }
+  }
+}

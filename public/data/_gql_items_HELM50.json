@@ -1,0 +1,680 @@
+{
+  "args": {
+    "slot": "HELM",
+    "career": "",
+    "type": "",
+    "rarity": "",
+    "name": "",
+    "minItemLevel": "",
+    "maxItemLevel": "",
+    "minRenown": "",
+    "maxRenown": "",
+    "first": 50,
+    "after": "",
+    "out": "public/data/_gql_items_HELM50.json"
+  },
+  "where": {
+    "slot": {
+      "eq": "HELM"
+    }
+  },
+  "usableByCareer": "",
+  "data": {
+    "edges": [
+      {
+        "node": {
+          "id": "103",
+          "name": "Belegar's Greathelm",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 0,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/2930",
+          "talismanSlots": 0,
+          "rarity": "UTILITY"
+        }
+      },
+      {
+        "node": {
+          "id": "112",
+          "name": "Skarsnik's Waaaghat",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 0,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/2353",
+          "talismanSlots": 0,
+          "rarity": "UTILITY"
+        }
+      },
+      {
+        "node": {
+          "id": "125",
+          "name": "Captain Helm",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 10,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7431",
+          "talismanSlots": 0,
+          "rarity": "MYTHIC"
+        }
+      },
+      {
+        "node": {
+          "id": "166",
+          "name": "Hellebron Hexveil",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 100,
+          "renownRankRequirement": 44,
+          "iconUrl": "https://armory.returnofreckoning.com/item/2419",
+          "talismanSlots": 0,
+          "rarity": "MYTHIC"
+        }
+      },
+      {
+        "node": {
+          "id": "531",
+          "name": "Redeemer's Greathelm",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "532",
+          "name": "Redeemer's War Shroud",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "533",
+          "name": "Redeemer's Skullcap",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "534",
+          "name": "Redeemer's Hardhat",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "535",
+          "name": "Redeemer's Hat",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "536",
+          "name": "Redeemer's Casque",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "537",
+          "name": "Redeemer's Grille",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "538",
+          "name": "Redeemer's Helm",
+          "type": "MEDIUM_ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "539",
+          "name": "Redeemer's Taen",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "540",
+          "name": "Redeemer's Maskhelm",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "541",
+          "name": "Redeemer's Steelhelm",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "542",
+          "name": "Redeemer's Circlet",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "543",
+          "name": "Greathelm of the Mourkain-foe",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "544",
+          "name": "War Shroud of the Mourkain-foe",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "545",
+          "name": "Skullcap of the Mourkain-foe",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "546",
+          "name": "Hardhat of the Mourkain-foe",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "547",
+          "name": "Hat of the Mourkain-foe",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "548",
+          "name": "Casque of the Mourkain-foe",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "549",
+          "name": "Grille of the Mourkain-foe",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "550",
+          "name": "Helm of the Mourkain-foe",
+          "type": "MEDIUM_ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "551",
+          "name": "Taen of the Mourkain-foe",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "552",
+          "name": "Maskhelm of the Mourkain-foe",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "553",
+          "name": "Steelhelm of the Mourkain-foe",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "554",
+          "name": "Circlet of the Mourkain-foe",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "555",
+          "name": "Eadplate of the Deathbringer",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/5332",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "556",
+          "name": "Skully of the Deathbringer",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "557",
+          "name": "Waaaghat of the Deathbringer",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "558",
+          "name": "Squignoggin of the Deathbringer",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "559",
+          "name": "Skullcase of the Deathbringer",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "560",
+          "name": "Direhelm of the Deathbringer",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "561",
+          "name": "Cowl of the Deathbringer",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "562",
+          "name": "Barbute of the Deathbringer",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "563",
+          "name": "Dreadhelm of the Deathbringer",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "564",
+          "name": "Hexveil of the Deathbringer",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "565",
+          "name": "Gorget of the Deathbringer",
+          "type": "MEDIUM_ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "566",
+          "name": "Spellcrown of the Deathbringer",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "567",
+          "name": "Brutal Eadplate",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/5332",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "568",
+          "name": "Brutal Skully",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "569",
+          "name": "Brutal Waaaghat",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "570",
+          "name": "Brutal Squignoggin",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "571",
+          "name": "Brutal Skullcase",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "572",
+          "name": "Brutal Direhelm",
+          "type": "MEDIUM_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "573",
+          "name": "Brutal Cowl",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "574",
+          "name": "Brutal Barbute",
+          "type": "ROBE",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "575",
+          "name": "Brutal Dreadhelm",
+          "type": "HEAVY_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "576",
+          "name": "Brutal Hexveil",
+          "type": "LIGHT_ARMOR",
+          "slot": "HELM",
+          "itemLevel": 19,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/8209",
+          "talismanSlots": 1,
+          "rarity": "VERY_RARE"
+        }
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "NDk="
+    }
+  }
+}

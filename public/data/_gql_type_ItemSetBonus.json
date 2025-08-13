@@ -1,0 +1,32 @@
+{
+  "kind": "OBJECT",
+  "name": "ItemSetBonus",
+  "fields": [
+    {
+      "name": "itemsRequired",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Byte",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "bonus",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "UNION",
+          "name": "ItemSetBonusValue",
+          "ofType": null
+        }
+      }
+    }
+  ],
+  "possibleTypes": null,
+  "enumValues": null
+}

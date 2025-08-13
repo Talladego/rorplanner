@@ -1,0 +1,37 @@
+{
+  "args": {
+    "slot": "",
+    "career": "WHITE_LION",
+    "type": "",
+    "rarity": "",
+    "name": "Sovereign",
+    "minItemLevel": "",
+    "maxItemLevel": "",
+    "minRenown": "",
+    "maxRenown": "",
+    "first": 50,
+    "after": "",
+    "out": "public/data/_gql_items_WL_Sovereign50.json"
+  },
+  "where": {
+    "name": {
+      "contains": "Sovereign"
+    },
+    "itemLevel": {
+      "gte": 0,
+      "lte": 0
+    },
+    "renownRankRequirement": {
+      "gte": 0,
+      "lte": 0
+    }
+  },
+  "usableByCareer": "WHITE_LION",
+  "data": {
+    "edges": [],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": null
+    }
+  }
+}

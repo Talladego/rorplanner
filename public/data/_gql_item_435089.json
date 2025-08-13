@@ -1,0 +1,167 @@
+{
+  "id": "435089",
+  "probe": {
+    "success": true,
+    "via": "item(id: ID!)",
+    "data": {
+      "item": {
+        "id": "435089",
+        "name": "Warlord Shadowed Amulet"
+      }
+    }
+  },
+  "detail": {
+    "via": "item",
+    "node": {
+      "id": "435089",
+      "name": "Warlord Shadowed Amulet",
+      "description": "Requires the Invader's Ward to equip.",
+      "type": "ACCESSORY",
+      "slot": "JEWELLERY4",
+      "rarity": "VERY_RARE",
+      "armor": 0,
+      "dps": 0,
+      "speed": 0,
+      "levelRequirement": 40,
+      "renownRankRequirement": 73,
+      "itemLevel": 73,
+      "uniqueEquipped": true,
+      "careerRestriction": [
+        "SHADOW_WARRIOR"
+      ],
+      "raceRestriction": [],
+      "iconUrl": "https://armory.returnofreckoning.com/item/791",
+      "talismanSlots": 0,
+      "stats": [
+        {
+          "stat": "WOUNDS",
+          "value": 16,
+          "percentage": false
+        },
+        {
+          "stat": "INITIATIVE",
+          "value": 16,
+          "percentage": false
+        },
+        {
+          "stat": "BALLISTIC_SKILL",
+          "value": 22,
+          "percentage": false
+        },
+        {
+          "stat": "SPIRIT_RESISTANCE",
+          "value": 87,
+          "percentage": false
+        },
+        {
+          "stat": "ELEMENTAL_RESISTANCE",
+          "value": 87,
+          "percentage": false
+        },
+        {
+          "stat": "CORPOREAL_RESISTANCE",
+          "value": 86,
+          "percentage": false
+        },
+        {
+          "stat": "ACTION_POINT_REGEN",
+          "value": 2,
+          "percentage": false
+        },
+        {
+          "stat": "AUTO_ATTACK_SPEED",
+          "value": 5,
+          "percentage": true
+        }
+      ],
+      "itemSet": {
+        "id": "4465",
+        "name": "Warlord's Forest Courser Kit",
+        "level": 70,
+        "bonuses": [
+          {
+            "itemsRequired": 2,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "BALLISTIC_SKILL",
+              "value": 75,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 3,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "WEAPON_SKILL",
+              "value": 83,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 4,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "EVADE_STRIKETHROUGH",
+              "value": 6,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 5,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "RANGED_POWER",
+              "value": 99,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 6,
+            "bonus": {
+              "__typename": "ItemStat",
+              "stat": "MASTERY_3_BONUS",
+              "value": 2,
+              "percentage": false
+            }
+          },
+          {
+            "itemsRequired": 7,
+            "bonus": {
+              "__typename": "Ability",
+              "id": "10153",
+              "description": "Dissolve IX - On Hit: 10% chance to reduce target's armor by 800 for 6 seconds."
+            }
+          },
+          {
+            "itemsRequired": 8,
+            "bonus": {
+              "__typename": "Ability",
+              "id": "28204",
+              "description": "Gain ability: Unshackled Freedom"
+            }
+          }
+        ]
+      },
+      "abilities": [],
+      "buffs": [
+        {
+          "id": "1137",
+          "name": "Invader Ward",
+          "description": "Requires Invader's Ward to Equip."
+        }
+      ],
+      "rewardedFromQuests": {
+        "edges": []
+      },
+      "rewardedFromChapters": {
+        "edges": []
+      },
+      "dropsFromCreatures": {
+        "edges": []
+      },
+      "dropsFromGameObjects": {
+        "edges": []
+      }
+    }
+  }
+}

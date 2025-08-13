@@ -1,0 +1,16 @@
+{
+  "kind": "UNION",
+  "name": "ItemSetBonusValue",
+  "fields": null,
+  "possibleTypes": [
+    {
+      "kind": "OBJECT",
+      "name": "Ability"
+    },
+    {
+      "kind": "OBJECT",
+      "name": "ItemStat"
+    }
+  ],
+  "enumValues": null
+}

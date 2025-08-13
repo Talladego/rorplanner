@@ -1,0 +1,344 @@
+{
+  "kind": "OBJECT",
+  "name": "Item",
+  "fields": [
+    {
+      "name": "id",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "ID",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "name",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "description",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "type",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "ENUM",
+          "name": "ItemType",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "slot",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "ENUM",
+          "name": "EquipSlot",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "rarity",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "ENUM",
+          "name": "ItemRarity",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "armor",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "UnsignedShort",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "dps",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "UnsignedShort",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "speed",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "UnsignedShort",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "levelRequirement",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Byte",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "renownRankRequirement",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Byte",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "itemLevel",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Byte",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "uniqueEquipped",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Boolean",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "stats",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "ItemStat",
+              "ofType": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "careerRestriction",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "ENUM",
+              "name": "Career",
+              "ofType": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "raceRestriction",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "ENUM",
+              "name": "Race",
+              "ofType": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "iconUrl",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "URL",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "talismanSlots",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "SCALAR",
+          "name": "Byte",
+          "ofType": null
+        }
+      }
+    },
+    {
+      "name": "itemSet",
+      "type": {
+        "kind": "OBJECT",
+        "name": "ItemSet",
+        "ofType": null
+      }
+    },
+    {
+      "name": "buffs",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "Ability",
+              "ofType": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "abilities",
+      "type": {
+        "kind": "NON_NULL",
+        "name": null,
+        "ofType": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "Ability",
+              "ofType": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "rewardedFromQuests",
+      "type": {
+        "kind": "OBJECT",
+        "name": "RewardedFromQuestsConnection",
+        "ofType": null
+      }
+    },
+    {
+      "name": "rewardedFromChapters",
+      "type": {
+        "kind": "OBJECT",
+        "name": "RewardedFromChaptersConnection",
+        "ofType": null
+      }
+    },
+    {
+      "name": "soldByVendors",
+      "type": {
+        "kind": "OBJECT",
+        "name": "SoldByVendorsConnection",
+        "ofType": null
+      }
+    },
+    {
+      "name": "usedToPurchase",
+      "type": {
+        "kind": "OBJECT",
+        "name": "UsedToPurchaseConnection",
+        "ofType": null
+      }
+    },
+    {
+      "name": "dropsFromCreatures",
+      "type": {
+        "kind": "OBJECT",
+        "name": "DropsFromCreaturesConnection",
+        "ofType": null
+      }
+    },
+    {
+      "name": "dropsFromGameObjects",
+      "type": {
+        "kind": "OBJECT",
+        "name": "DropsFromGameObjectsConnection",
+        "ofType": null
+      }
+    }
+  ],
+  "possibleTypes": null,
+  "enumValues": null
+}

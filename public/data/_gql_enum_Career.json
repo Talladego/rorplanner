@@ -1,0 +1,78 @@
+{
+  "kind": "ENUM",
+  "name": "Career",
+  "enumValues": [
+    {
+      "name": "IRON_BREAKER"
+    },
+    {
+      "name": "SLAYER"
+    },
+    {
+      "name": "RUNE_PRIEST"
+    },
+    {
+      "name": "ENGINEER"
+    },
+    {
+      "name": "BLACK_ORC"
+    },
+    {
+      "name": "CHOPPA"
+    },
+    {
+      "name": "SHAMAN"
+    },
+    {
+      "name": "SQUIG_HERDER"
+    },
+    {
+      "name": "WITCH_HUNTER"
+    },
+    {
+      "name": "KNIGHT_OF_THE_BLAZING_SUN"
+    },
+    {
+      "name": "BRIGHT_WIZARD"
+    },
+    {
+      "name": "WARRIOR_PRIEST"
+    },
+    {
+      "name": "CHOSEN"
+    },
+    {
+      "name": "MARAUDER"
+    },
+    {
+      "name": "ZEALOT"
+    },
+    {
+      "name": "MAGUS"
+    },
+    {
+      "name": "SWORD_MASTER"
+    },
+    {
+      "name": "SHADOW_WARRIOR"
+    },
+    {
+      "name": "WHITE_LION"
+    },
+    {
+      "name": "ARCHMAGE"
+    },
+    {
+      "name": "BLACK_GUARD"
+    },
+    {
+      "name": "WITCH_ELF"
+    },
+    {
+      "name": "DISCIPLE_OF_KHAINE"
+    },
+    {
+      "name": "SORCERER"
+    }
+  ]
+}

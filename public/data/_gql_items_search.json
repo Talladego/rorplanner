@@ -1,0 +1,576 @@
+{
+  "args": {
+    "slot": "",
+    "career": "",
+    "type": "",
+    "rarity": "",
+    "name": "Genesis",
+    "minItemLevel": "",
+    "maxItemLevel": "",
+    "minRenown": "",
+    "maxRenown": "",
+    "first": 50,
+    "after": "",
+    "out": "public/data/_gql_items_search.json"
+  },
+  "where": {
+    "name": {
+      "contains": "Genesis"
+    }
+  },
+  "usableByCareer": "",
+  "data": {
+    "edges": [
+      {
+        "node": {
+          "id": "456",
+          "name": "Genesis Cloak of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "457",
+          "name": "Genesis Cloak of The Scholar",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "459",
+          "name": "Genesis Cloak of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "461",
+          "name": "Genesis Shard of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "462",
+          "name": "Genesis Fragment of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "463",
+          "name": "Genesis Aspect of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "464",
+          "name": "Genesis Remnant of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "465",
+          "name": "Genesis Cloak of the Warrior",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "466",
+          "name": "Genesis Shard of the Sharpshooter",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "467",
+          "name": "Genesis Fragment of the Sharpshooter",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "468",
+          "name": "Genesis Aspect of the Sharpshooter",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "469",
+          "name": "Genesis Remnant of the Sharpshooter",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "470",
+          "name": "Genesis Cloak of the Sharpshooter",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "471",
+          "name": "Genesis Shard of the Curative",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "472",
+          "name": "Genesis Fragment of the Curative",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "473",
+          "name": "Genesis Aspect of the Curative",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "474",
+          "name": "Genesis Remnant of the Curative",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "475",
+          "name": "Genesis Cloak of the Curative",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "476",
+          "name": "Genesis Shard of the Scholar",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "477",
+          "name": "Genesis Fragment of the Scholar",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "478",
+          "name": "Genesis Aspect of the Scholar",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "479",
+          "name": "Genesis Remnant of the Scholar",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "480",
+          "name": "Genesis Cloak of The Scholar",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "481",
+          "name": "Genesis Shard of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "482",
+          "name": "Genesis Fragment of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "483",
+          "name": "Genesis Aspect of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "484",
+          "name": "Genesis Remnant of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "485",
+          "name": "Genesis Cloak of the Everlasting",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "486",
+          "name": "Genesis Shard",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3875",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "487",
+          "name": "Genesis Fragment",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3876",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "488",
+          "name": "Genesis Aspect",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3907",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "489",
+          "name": "Genesis Remnant",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3938",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "490",
+          "name": "Genesis Cloak",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7150",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "492",
+          "name": "Genesis Crest",
+          "type": "CURRENCY",
+          "slot": "NONE",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7635",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "889",
+          "name": "Genesis Shard of the Undying",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3985",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "890",
+          "name": "Genesis Fragment of the Undying",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3880",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "891",
+          "name": "Genesis Aspect of the Undying",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3910",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "892",
+          "name": "Genesis Remnant of the Undying",
+          "type": "ACCESSORY",
+          "slot": "JEWELLERY1",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/3897",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "893",
+          "name": "Genesis Cloak of the Undying",
+          "type": "ACCESSORY",
+          "slot": "BACK",
+          "itemLevel": 45,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/7136",
+          "talismanSlots": 0,
+          "rarity": "VERY_RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "60070",
+          "name": "Genesis Letter^Order",
+          "type": "QUEST",
+          "slot": "NONE",
+          "itemLevel": 0,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/4007",
+          "talismanSlots": 0,
+          "rarity": "RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "60071",
+          "name": "Genesis Letter^Destro",
+          "type": "QUEST",
+          "slot": "NONE",
+          "itemLevel": 0,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/4007",
+          "talismanSlots": 0,
+          "rarity": "RARE"
+        }
+      },
+      {
+        "node": {
+          "id": "452069",
+          "name": "Buried Chest^GenesisCrest",
+          "type": "NONE",
+          "slot": "NONE",
+          "itemLevel": 0,
+          "renownRankRequirement": 0,
+          "iconUrl": "https://armory.returnofreckoning.com/item/9502",
+          "talismanSlots": 0,
+          "rarity": "RARE"
+        }
+      }
+    ],
+    "pageInfo": {
+      "hasNextPage": false,
+      "endCursor": "NDE="
+    }
+  }
+}

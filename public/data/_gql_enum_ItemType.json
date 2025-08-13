@@ -1,0 +1,126 @@
+{
+  "kind": "ENUM",
+  "name": "ItemType",
+  "enumValues": [
+    {
+      "name": "NONE"
+    },
+    {
+      "name": "SWORD"
+    },
+    {
+      "name": "AXE"
+    },
+    {
+      "name": "HAMMER"
+    },
+    {
+      "name": "BASIC_SHIELD"
+    },
+    {
+      "name": "SHIELD"
+    },
+    {
+      "name": "ROBE"
+    },
+    {
+      "name": "BOW"
+    },
+    {
+      "name": "CROSSBOW"
+    },
+    {
+      "name": "GUN"
+    },
+    {
+      "name": "EXPERT_SHIELD"
+    },
+    {
+      "name": "STAFF"
+    },
+    {
+      "name": "DAGGER"
+    },
+    {
+      "name": "SPEAR"
+    },
+    {
+      "name": "PISTOL"
+    },
+    {
+      "name": "LANCE"
+    },
+    {
+      "name": "REPEATING_CROSSBOW"
+    },
+    {
+      "name": "LIGHT_ARMOR"
+    },
+    {
+      "name": "MEDIUM_ARMOR"
+    },
+    {
+      "name": "HEAVY_ARMOR"
+    },
+    {
+      "name": "QUEST"
+    },
+    {
+      "name": "MEDIUM_ROBE"
+    },
+    {
+      "name": "ENHANCEMENT"
+    },
+    {
+      "name": "TROPHY"
+    },
+    {
+      "name": "CHARM"
+    },
+    {
+      "name": "DYE"
+    },
+    {
+      "name": "BASIC_MOUNT"
+    },
+    {
+      "name": "ADVANCED_MOUNT"
+    },
+    {
+      "name": "POTION"
+    },
+    {
+      "name": "SALVAGING"
+    },
+    {
+      "name": "MARKETING"
+    },
+    {
+      "name": "CRAFTING"
+    },
+    {
+      "name": "ACCESSORY"
+    },
+    {
+      "name": "CURRENCY"
+    },
+    {
+      "name": "TELEPORT"
+    },
+    {
+      "name": "TELEPORT_GROUP"
+    },
+    {
+      "name": "SIEGE"
+    },
+    {
+      "name": "TREASURE_CHEST"
+    },
+    {
+      "name": "TREASURE_KEY"
+    },
+    {
+      "name": "REFINER_TOOL"
+    }
+  ]
+}

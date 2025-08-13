@@ -1,0 +1,96 @@
+{
+  "id": "800749",
+  "probe": {
+    "success": true,
+    "via": "item(id: ID!)",
+    "data": {
+      "item": {
+        "id": "800749",
+        "name": "Rend Ring of the Fleshrender"
+      }
+    }
+  },
+  "detail": {
+    "via": "item",
+    "node": {
+      "id": "800749",
+      "name": "Rend Ring of the Fleshrender",
+      "description": "",
+      "type": "ACCESSORY",
+      "slot": "JEWELLERY1",
+      "rarity": "RARE",
+      "armor": 0,
+      "dps": 0,
+      "speed": 0,
+      "levelRequirement": 36,
+      "renownRankRequirement": 0,
+      "itemLevel": 36,
+      "uniqueEquipped": false,
+      "careerRestriction": [
+        "BLACK_ORC",
+        "CHOPPA",
+        "CHOSEN",
+        "MARAUDER",
+        "BLACK_GUARD",
+        "WITCH_ELF",
+        "DISCIPLE_OF_KHAINE"
+      ],
+      "raceRestriction": [],
+      "iconUrl": "https://armory.returnofreckoning.com/item/966",
+      "talismanSlots": 0,
+      "stats": [
+        {
+          "stat": "STRENGTH",
+          "value": 18,
+          "percentage": false
+        },
+        {
+          "stat": "SPIRIT_RESISTANCE",
+          "value": 35,
+          "percentage": false
+        },
+        {
+          "stat": "ELEMENTAL_RESISTANCE",
+          "value": 61,
+          "percentage": false
+        },
+        {
+          "stat": "CORPOREAL_RESISTANCE",
+          "value": 78,
+          "percentage": false
+        },
+        {
+          "stat": "MORALE_REGEN",
+          "value": 2,
+          "percentage": false
+        },
+        {
+          "stat": "ARMOR_PENETRATION_REDUCTION",
+          "value": 2,
+          "percentage": false
+        }
+      ],
+      "abilities": [],
+      "buffs": [],
+      "rewardedFromQuests": {
+        "edges": []
+      },
+      "rewardedFromChapters": {
+        "edges": []
+      },
+      "dropsFromCreatures": {
+        "edges": [
+          {
+            "node": {
+              "id": "44438",
+              "name": "Kyreia Sek"
+            }
+          }
+        ]
+      },
+      "dropsFromGameObjects": {
+        "edges": []
+      }
+    }
+  }
+}

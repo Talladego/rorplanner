@@ -1,0 +1,81 @@
+{
+  "kind": "ENUM",
+  "name": "EquipSlot",
+  "enumValues": [
+    {
+      "name": "NONE"
+    },
+    {
+      "name": "EVENT"
+    },
+    {
+      "name": "MAIN_HAND"
+    },
+    {
+      "name": "OFF_HAND"
+    },
+    {
+      "name": "RANGED_WEAPON"
+    },
+    {
+      "name": "EITHER_HAND"
+    },
+    {
+      "name": "STANDARD"
+    },
+    {
+      "name": "TROPHY1"
+    },
+    {
+      "name": "TROPHY2"
+    },
+    {
+      "name": "TROPHY3"
+    },
+    {
+      "name": "TROPHY4"
+    },
+    {
+      "name": "TROPHY5"
+    },
+    {
+      "name": "BODY"
+    },
+    {
+      "name": "GLOVES"
+    },
+    {
+      "name": "BOOTS"
+    },
+    {
+      "name": "HELM"
+    },
+    {
+      "name": "SHOULDER"
+    },
+    {
+      "name": "POCKET1"
+    },
+    {
+      "name": "POCKET2"
+    },
+    {
+      "name": "BACK"
+    },
+    {
+      "name": "BELT"
+    },
+    {
+      "name": "JEWELLERY1"
+    },
+    {
+      "name": "JEWELLERY2"
+    },
+    {
+      "name": "JEWELLERY3"
+    },
+    {
+      "name": "JEWELLERY4"
+    }
+  ]
+}
