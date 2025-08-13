@@ -828,6 +828,11 @@ export default function Planner({ variant = 'grid' }) {
     setPickerIsTalis(true);
     setPickerTalisHost({ slotName: hostSlotName, index: i });
     setPickerSlot(`Talisman ${i + 1}`);
+  // Clear item filters so talismans are shown regardless of prior filters
+  setFilterName('');
+  setFilterStat('');
+  setFilterRarity('');
+  setFilterSetOnly(false);
     setPickerOpen(true);
   };
   const clearTalis = (hostSlotName, i) => {
@@ -883,12 +888,12 @@ export default function Planner({ variant = 'grid' }) {
           // We'll try by type first, then by slot if available.
           let byId = new Map();
             try {
-              // Do NOT pass career for talismans; usableByCareer may exclude them server-side
-              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+              // Do NOT pass career or additional filters for talismans; fetch all and filter locally by MR
+              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'TALISMAN' });
             for (const n of (byType || [])) byId.set(String(n.id), n);
           } catch {}
           try {
-              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN' });
             for (const n of (bySlot || [])) byId.set(String(n.id), n);
           } catch {}
           // host context for validation
@@ -898,18 +903,8 @@ export default function Planner({ variant = 'grid' }) {
           const existing = Array.isArray(talismans?.[hostName]) ? talismans[hostName] : [];
           const currentAtIdx = existing?.[pickerTalisHost?.index || 0];
           const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
-      let items = Array.from(byId.values())
+          let items = Array.from(byId.values())
             .filter((n) => {
-              if (filterStat) {
-                const stats = n?.stats || [];
-                const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
-                if (!has) return false;
-              }
-              if (filterRarity) {
-                const r = String(n?.rarity || '').toUpperCase();
-                if (r !== filterRarity) return false;
-              }
-              if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
               // Minimum Rank (talisman) must equal host item level
               if (hostIlvl) {
                 const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
