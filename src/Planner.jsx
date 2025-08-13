@@ -888,12 +888,13 @@ export default function Planner({ variant = 'grid' }) {
           // We'll try by type first, then by slot if available.
           let byId = new Map();
             try {
-              // Do NOT pass career or additional filters for talismans; fetch all and filter locally by MR
-              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'TALISMAN' });
+              // Talismans are type ENHANCEMENT in the API
+              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'ENHANCEMENT' });
             for (const n of (byType || [])) byId.set(String(n.id), n);
           } catch {}
           try {
-              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN' });
+              // Many show slot NONE; merge those too
+              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'NONE' });
             for (const n of (bySlot || [])) byId.set(String(n.id), n);
           } catch {}
           // host context for validation
