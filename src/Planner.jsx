@@ -184,14 +184,36 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
               </ul>
             </div>
           ) : null}
-          {/* Talisman slots as empty icons */}
+          {/* Talisman slots: show attached if present */}
           {typeof talis === 'number' && talis > 0 && (
             <div className="tooltip-section">
               <div className="section-title">Talisman Slots</div>
               <div className="talis-list">
-                {Array.from({ length: talis }).map((_, i) => (
-                  <div key={i} className="talis-line"><img className="talis-icon" src={'https://armory.returnofreckoning.com/icon/1'} alt="" /> Empty Talisman Slot</div>
-                ))}
+                {Array.from({ length: talis }).map((_, i) => {
+                  const t = Array.isArray(talismans) ? talismans[i] : null;
+                  if (t) {
+                    const tdet = t.details || {};
+                    const ticon = t.iconUrl || tdet.iconUrl || (tdet.iconId ? `https://armory.returnofreckoning.com/item/${tdet.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+                    const tstats = Array.isArray(tdet.stats) ? tdet.stats : (Array.isArray(t.stats) ? t.stats : []);
+                    return (
+                      <div key={i} className="talis-line">
+                        <img className="talis-icon" src={ticon} alt="" /> {t.name}
+                        {tstats && tstats.length ? (
+                          <ul className="stat-list" style={{ marginTop: 4 }}>
+                            {tstats.map((s, j) => (
+                              <li key={j} className="stat-line">
+                                <span className="plus">+</span>
+                                <span className="val">{typeof s.value === 'number' ? s.value : ''}{s.percentage || s.unit === '%' ? '%' : ''}</span>
+                                <span className="label">{formatTitle(s.stat || s.name || s.type)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  return (<div key={i} className="talis-line"><img className="talis-icon" src={'https://armory.returnofreckoning.com/icon/1'} alt="" /> Empty Talisman Slot</div>);
+                })}
               </div>
             </div>
           )}
@@ -785,7 +807,7 @@ export default function Planner({ variant = 'grid' }) {
         const hostItem = equipped[host];
   const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
         const tMinRank = Number(detail?.levelRequirement || detail?.minimumRank || item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
-        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
+  if (hostIlvl && tMinRank && tMinRank > hostIlvl) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
         const idStr = String(detail?.id || item.id);
         const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
@@ -805,7 +827,7 @@ export default function Planner({ variant = 'grid' }) {
         const hostItem = equipped[host];
   const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
         const tMinRank = Number(item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
-        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
+  if (hostIlvl && tMinRank && tMinRank > hostIlvl) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
         const idStr = String(item?.id);
         const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
@@ -828,10 +850,9 @@ export default function Planner({ variant = 'grid' }) {
     setPickerIsTalis(true);
     setPickerTalisHost({ slotName: hostSlotName, index: i });
     setPickerSlot(`Talisman ${i + 1}`);
-  // Clear item filters so talismans are shown regardless of prior filters
+  // Clear some filters for clarity when switching to talisman mode
   setFilterName('');
   setFilterStat('');
-  setFilterRarity('');
   setFilterSetOnly(false);
     setPickerOpen(true);
   };
@@ -916,6 +937,22 @@ export default function Planner({ variant = 'grid' }) {
           const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
           let items = Array.from(byId.values())
             .filter((n) => {
+              // Optional filters
+              if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
+              if (filterStat) {
+                const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
+                const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
+                if (!has) return false;
+              }
+              if (filterRarity) {
+                const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
+                if (r !== String(filterRarity).toUpperCase()) return false;
+              }
+              // Minimum Rank (talisman) must be <= host item level
+              if (hostIlvl) {
+                const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
+                if (tMin && tMin > hostIlvl) return false;
+              }
               // Exclude duplicates already slotted (allow same id at current index)
               const idStr = String(n?.id || '');
               if (!idStr) return false;
