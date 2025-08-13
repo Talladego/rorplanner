@@ -92,9 +92,9 @@
 .item-left { display: inline-flex; align-items: center; gap: 8px; }
 .item-icon { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; border: 1px solid #444; background: #111; }
 .item-name { font-weight: 600; }
-.item-meta { display: inline-flex; align-items: center; gap: 10px; margin-left: 12px; opacity: 0.9; font-size: 0.9rem; }
-.item-meta .meta-il { color: #d1e77a; }
-.item-meta .meta-set { color: #f5c542; }
+.item-meta { display: inline-flex; align-items: center; gap: 10px; margin-left: 12px; opacity: 0.9; font-size: 0.8rem; color: #aaa; }
+.item-meta .meta-il { color: inherit; }
+.item-meta .meta-set { color: inherit; }
 .item-slot { opacity: 0.85; font-size: 0.9rem; }
 /* Rarity colors (approximations tuned to Killboard palette) */
 .rarity-utility { color: #9aa0a6; }
