@@ -649,6 +649,23 @@ export default function Planner({ variant = 'grid' }) {
         ]);
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
+        // Precompute likely server slot enums for this target for fetch and raw matching
+        const slotVariants = (() => {
+          if (target === 'helm') return ['HELM','HEAD'];
+          if (target === 'shoulders') return ['SHOULDER','SHOULDERS'];
+          if (target === 'cloak') return ['CLOAK','BACK','CAPE'];
+          if (target === 'body') return ['CHEST','BODY'];
+          if (target === 'gloves') return ['HANDS','GLOVES'];
+          if (target === 'belt') return ['WAIST','BELT'];
+          if (target === 'boots') return ['FEET','BOOTS'];
+          if (target === 'main hand') return ['MAIN_HAND','MAINHAND'];
+          if (target === 'off hand') return ['OFF_HAND','OFFHAND'];
+          if (target === 'ranged weapon') return ['RANGED_WEAPON','RANGED'];
+          if (target === 'event item') return ['EVENT_ITEM','EVENTITEM'];
+          if (target === 'pocket 1') return ['POCKET1','POCKET_1'];
+          if (target === 'pocket 2') return ['POCKET2','POCKET_2'];
+          return [];
+        })();
         // Fetch career-scoped; for jewelry, fetch with and without type filter and merge
   let itemsRawCareer = [];
         if (isJewelryTarget) {
@@ -679,38 +696,6 @@ export default function Planner({ variant = 'grid' }) {
             return undefined;
           })();
           // Try likely slot enum variants sequentially; skip invalid enum errors
-          const slotVariants = (() => {
-            if (target === 'helm') return ['HELM','HEAD'];
-            if (target === 'shoulders') return ['SHOULDER','SHOULDERS'];
-            if (target === 'cloak') return ['CLOAK','BACK','CAPE'];
-            if (target === 'body') return ['CHEST','BODY'];
-            if (target === 'gloves') return ['HANDS','GLOVES'];
-            if (target === 'belt') return ['WAIST','BELT'];
-            if (target === 'boots') return ['FEET','BOOTS'];
-            if (target === 'main hand') return ['MAIN_HAND','MAINHAND'];
-            if (target === 'off hand') return ['OFF_HAND','OFFHAND'];
-            if (target === 'ranged weapon') return ['RANGED_WEAPON','RANGED'];
-            if (target === 'event item') return ['EVENT_ITEM','EVENTITEM'];
-            if (target === 'pocket 1') return ['POCKET1','POCKET_1'];
-            if (target === 'pocket 2') return ['POCKET2','POCKET_2'];
-            const def = (() => {
-              if (target === 'helm') return 'HELM';
-              if (target === 'shoulders') return 'SHOULDER';
-              if (target === 'cloak') return 'BACK';
-              if (target === 'body') return 'BODY';
-              if (target === 'gloves') return 'GLOVES';
-              if (target === 'belt') return 'BELT';
-              if (target === 'boots') return 'BOOTS';
-              if (target === 'main hand') return 'MAIN_HAND';
-              if (target === 'off hand') return 'OFF_HAND';
-              if (target === 'ranged weapon') return 'RANGED_WEAPON';
-              if (target === 'event item') return 'EVENT_ITEM';
-              if (target === 'pocket 1') return 'POCKET1';
-              if (target === 'pocket 2') return 'POCKET2';
-              return undefined;
-            })();
-            return [def].filter(Boolean);
-          })();
           const byId = new Map();
           for (const sv of slotVariants) {
             try {
