@@ -124,7 +124,7 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
 const EMPTY_ICON = "https://armory.returnofreckoning.com/item/1";
 let ICON_FALLBACKS_CACHE = null;
 
-function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid' }) {
+function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid', talisCount = 0, talismans = [], onTalisPick, onTalisClear }) {
   const tipClass = `gear-tooltip`;
   const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const buildTooltip = () => {
@@ -249,6 +249,43 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
       </div>
     );
   };
+  const buildTalisTooltip = (t) => {
+    if (!t) return null;
+    const det = t.details || {};
+    const rarity = String(t.rarity || det.rarity || '').toLowerCase();
+    const stats = Array.isArray(det.stats) ? det.stats : [];
+    const icon = det.iconUrl || t.iconUrl || (det.iconId ? `https://armory.returnofreckoning.com/item/${det.iconId}` : EMPTY_ICON);
+    const minRank = Number(det.levelRequirement || det.minimumRank || 0) || null;
+    return (
+      <div className={`tooltip-card ${rarity ? 'rarity-' + rarity : ''}`} role="tooltip">
+        <div className="tooltip-header">
+          <img className="tooltip-icon" src={icon} alt="" />
+          <div>
+            <div className={`tooltip-name`}>{t.name}</div>
+          </div>
+        </div>
+        <div className="tooltip-body">
+          {minRank ? (
+            <div className="tooltip-section"><div>Minimum Rank: {minRank}</div></div>
+          ) : null}
+          {stats.length ? (
+            <div className="tooltip-section">
+              <div className="section-title">Stats</div>
+              <ul className="stat-list">
+                {stats.map((s, i) => (
+                  <li key={i} className="stat-line">
+                    <span className="plus">+</span>
+                    <span className="val">{typeof s.value === 'number' ? s.value : ''}{s.percentage || s.unit === '%' ? '%' : ''}</span>
+                    <span className="label">{formatTitle(s.stat || s.name || s.type)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
   const computeSiblingFallback = () => {
     if (!item || !item.name) return null;
     const slotNorm = (s) => (s || '').trim().toLowerCase();
@@ -311,6 +348,21 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
           <span key={idx} className={idx === 0 ? `line name-line ${rarityClass}` : 'line meta-line'}>{ln}</span>
                 ))}
               </div>
+              {talisCount > 0 && (
+                <div className="talis-row">
+                  {Array.from({ length: talisCount }).map((_, i) => {
+                    const t = talismans?.[i] || null;
+                    const tIcon = t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+                    return (
+                      <div key={i} className={`talis-slot${t ? ' filled' : ''}`} data-slotname={`${name}::talis::${i}`} onClick={(e) => { e.stopPropagation(); onTalisPick?.(name, i); }}>
+                        {t ? <img className="talis-icon-small" src={tIcon} alt="" /> : null}
+                        {t ? <div className={tipClass}>{buildTalisTooltip(t)}</div> : null}
+                        {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })() : (
@@ -327,6 +379,21 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
       <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
       <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
   <div className={`gear-label ${rarityClass}`}>{itemLabel}</div>
+      {talisCount > 0 && (
+        <div className="talis-row" onClick={(e) => e.stopPropagation()}>
+          {Array.from({ length: talisCount }).map((_, i) => {
+            const t = talismans?.[i] || null;
+            const tIcon = t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+            return (
+              <div key={i} className={`talis-slot${t ? ' filled' : ''}`} onClick={() => onTalisPick?.(name, i)}>
+                {t ? <img className="talis-icon-small" src={tIcon} alt="" /> : null}
+                {t ? <div className={tipClass}>{buildTalisTooltip(t)}</div> : null}
+                {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -470,6 +537,8 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
 export default function Planner({ variant = 'grid' }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
+  const [pickerIsTalis, setPickerIsTalis] = useState(false);
+  const [pickerTalisHost, setPickerTalisHost] = useState({ slotName: '', index: 0 });
   const [allItems] = useState([]); // legacy; no static preload
   const [career, setCareer] = useState(DEFAULT_CAREER);
   const [careerRank, setCareerRank] = useState(40);
@@ -485,6 +554,8 @@ export default function Planner({ variant = 'grid' }) {
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState(null);
+  // talismans equipped per gear slot: { [slotName]: [t1,t2,...] }
+  const [talismans, setTalismans] = useState({});
 
   // No static item preload on Pages; rely on live GraphQL only
 
@@ -500,11 +571,18 @@ export default function Planner({ variant = 'grid' }) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           setEquipped(parsed);
+          const tRaw = localStorage.getItem(`talismans:${career}`);
+          if (tRaw) {
+            try { const t = JSON.parse(tRaw); if (t && typeof t === 'object') setTalismans(t); } catch {}
+          } else {
+            setTalismans({});
+          }
           return;
         }
       }
   } catch { /* ignore load error */ }
     setEquipped({});
+    setTalismans({});
   }, [career]);
 
   // Persist equipped items whenever they change
@@ -513,6 +591,10 @@ export default function Planner({ variant = 'grid' }) {
       localStorage.setItem(`equipped:${career}`, JSON.stringify(equipped || {}));
   } catch { /* ignore save error */ }
   }, [equipped, career]);
+
+  useEffect(() => {
+    try { localStorage.setItem(`talismans:${career}`, JSON.stringify(talismans || {})); } catch {}
+  }, [talismans, career]);
 
   const filteredItems = useMemo(() => {
     if (!pickerSlot) return [];
@@ -696,27 +778,100 @@ export default function Planner({ variant = 'grid' }) {
           } : undefined,
         },
       };
-  if (pickerSlot) setEquipped((prev) => ({ ...prev, [pickerSlot]: mapped }));
+      if (pickerIsTalis) {
+        const host = pickerTalisHost.slotName;
+        const idx = pickerTalisHost.index;
+        // Enforce talisman Minimum Rank equals host item level
+        const hostItem = equipped[host];
+        const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+        const tMinRank = Number(detail?.levelRequirement || detail?.minimumRank || item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
+        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) {
+          alert(`Talisman Minimum Rank ${tMinRank} does not match host item level ${hostIlvl}.`);
+          setPickerOpen(false);
+          setPickerIsTalis(false);
+          return;
+        }
+        // Enforce no duplicate identical talisman on the same host
+        const idStr = String(detail?.id || item.id);
+        const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
+        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) {
+          alert('This talisman is already slotted on this item. Duplicate identical talismans are not allowed.');
+          setPickerOpen(false);
+          setPickerIsTalis(false);
+          return;
+        }
+        setTalismans((prev) => {
+          const arr = Array.isArray(prev[host]) ? [...prev[host]] : [];
+          arr[idx] = mapped;
+          return { ...prev, [host]: arr };
+        });
+      } else if (pickerSlot) {
+        setEquipped((prev) => ({ ...prev, [pickerSlot]: mapped }));
+      }
     } catch {
-      if (pickerSlot) setEquipped((prev) => ({ ...prev, [pickerSlot]: item }));
+      if (pickerIsTalis) {
+        const host = pickerTalisHost.slotName;
+        const idx = pickerTalisHost.index;
+        const hostItem = equipped[host];
+        const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+        const tMinRank = Number(item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
+        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) {
+          alert(`Talisman Minimum Rank ${tMinRank} does not match host item level ${hostIlvl}.`);
+          setPickerOpen(false);
+          setPickerIsTalis(false);
+          return;
+        }
+        // Enforce no duplicate identical talisman on the same host
+        const idStr = String(item?.id);
+        const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
+        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) {
+          alert('This talisman is already slotted on this item. Duplicate identical talismans are not allowed.');
+          setPickerOpen(false);
+          setPickerIsTalis(false);
+          return;
+        }
+        setTalismans((prev) => {
+          const arr = Array.isArray(prev[host]) ? [...prev[host]] : [];
+          arr[idx] = item;
+          return { ...prev, [host]: arr };
+        });
+      } else if (pickerSlot) {
+        setEquipped((prev) => ({ ...prev, [pickerSlot]: item }));
+      }
     } finally {
       setPickerOpen(false);
+      setPickerIsTalis(false);
     }
+  };
+
+  const openTalisPicker = (hostSlotName, i) => {
+    setPickerIsTalis(true);
+    setPickerTalisHost({ slotName: hostSlotName, index: i });
+    setPickerSlot(`Talisman ${i + 1}`);
+    setPickerOpen(true);
+  };
+  const clearTalis = (hostSlotName, i) => {
+    setTalismans((prev) => {
+      const arr = Array.isArray(prev[hostSlotName]) ? [...prev[hostSlotName]] : [];
+      arr[i] = null;
+      return { ...prev, [hostSlotName]: arr };
+    });
   };
 
   // When opening the picker, fetch items for that slot and career via GraphQL
   useEffect(() => {
     let ignore = false;
-    async function loadFromGraphQL() {
+  async function loadFromGraphQL() {
       if (!pickerOpen || !pickerSlot) return;
   // Live GraphQL enabled even on GitHub Pages; ensure endpoint allows CORS
       setPickerLoading(true);
       setPickerError(null);
     setPickerItems([]);
       try {
-        // Normalize and map slot names (declare before use)
+  // Normalize and map slot names (declare before use)
   const normalize = (s) => (s || '').trim().toLowerCase().replaceAll('jewellry', 'jewelry');
   const jewelrySlots = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'];
+  const isTalisPicker = pickerIsTalis;
         const mapExact = new Map([
           ['main hand', ['main hand', 'right hand', 'mainhand']],
           ['off hand', ['off hand', 'left hand', 'offhand']],
@@ -743,6 +898,81 @@ export default function Planner({ variant = 'grid' }) {
         ]);
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
+        if (isTalisPicker) {
+          // Fetch talisman items: most have slot 'TALISMAN' or type includes 'TALISMAN'.
+          // We'll try by type first, then by slot if available.
+          let byId = new Map();
+          const mapCareer = (c) => {
+            const v = String(c || '').trim().toUpperCase();
+            return v === 'BLACKGUARD' ? 'BLACK_GUARD' : v;
+          };
+          try {
+            const byType = await fetchItems({ career: mapCareer(career), perPage: 50, totalLimit: 500, typeEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+            for (const n of (byType || [])) byId.set(String(n.id), n);
+          } catch {}
+          try {
+            const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+            for (const n of (bySlot || [])) byId.set(String(n.id), n);
+          } catch {}
+          // host context for validation
+          const hostName = pickerTalisHost?.slotName || '';
+          const hostItem = equipped[hostName];
+          const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+          const existing = Array.isArray(talismans?.[hostName]) ? talismans[hostName] : [];
+          const currentAtIdx = existing?.[pickerTalisHost?.index || 0];
+          const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
+          let items = Array.from(byId.values())
+            .filter((n) => {
+              if (filterStat) {
+                const stats = n?.stats || [];
+                const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
+                if (!has) return false;
+              }
+              if (filterRarity) {
+                const r = String(n?.rarity || '').toUpperCase();
+                if (r !== filterRarity) return false;
+              }
+              if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
+              // Minimum Rank (talisman) must equal host item level
+              if (hostIlvl) {
+                const tMin = Number(n?.levelRequirement || n?.minimumRank || 0) || 0;
+                if (!tMin || tMin !== hostIlvl) return false;
+              }
+              // Exclude duplicates already slotted (allow same id at current index)
+              const idStr = String(n?.id || '');
+              if (!idStr) return false;
+              if (excludeIds.has(idStr)) return false;
+              return true;
+            })
+            .sort((a,b) => {
+              const ilA = Number(a?.itemLevel || 0);
+              const ilB = Number(b?.itemLevel || 0);
+              if (ilA !== ilB) return ilB - ilA;
+              const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+              const ra = rarOrder.indexOf(String(a?.rarity || '').toUpperCase());
+              const rb = rarOrder.indexOf(String(b?.rarity || '').toUpperCase());
+              return (rb - ra);
+            });
+          if (items.length === 0) {
+            try {
+              const byName = await fetchItems({ perPage: 50, totalLimit: 200, allowAnyName: false, nameContains: 'talisman' });
+              items = (byName || [])
+                .filter((n) => {
+                  if (hostIlvl) {
+                    const tMin = Number(n?.levelRequirement || n?.minimumRank || 0) || 0;
+                    if (!tMin || tMin !== hostIlvl) return false;
+                  }
+                  const idStr = String(n?.id || '');
+                  if (!idStr) return false;
+                  if (excludeIds.has(idStr)) return false;
+                  return true;
+                })
+                .sort((a,b) => (Number(b?.itemLevel||0) - Number(a?.itemLevel||0)));
+            } catch {}
+          }
+          if (!ignore) setPickerItems(items);
+          return;
+        }
         // Precompute likely server slot enums for this target for fetch and raw matching
         const slotVariants = (() => {
           if (target === 'helm') return ['HELM','HEAD'];
@@ -974,7 +1204,7 @@ export default function Planner({ variant = 'grid' }) {
           // debug only in dev
           console.debug('[Picker]', pickerSlot, 'raw=', (itemsRawCareer||[]).length, 'final=', items.length, 'slot-mismatch=', mismatchedSlot, 'career-mismatch=', careerMismatches);
         }
-        if (!ignore) {
+    if (!ignore) {
           setPickerItems(items || []);
         }
       } catch (e) {
@@ -985,7 +1215,7 @@ export default function Planner({ variant = 'grid' }) {
     }
     loadFromGraphQL();
     return () => { ignore = true; };
-  }, [pickerOpen, pickerSlot, career, careerRank, renownRank, equipped, filterName, filterStat, filterRarity]);
+  }, [pickerOpen, pickerSlot, pickerIsTalis, pickerTalisHost, talismans, career, careerRank, renownRank, equipped, filterName, filterStat, filterRarity]);
 
   // Aggregate primary stats from equipped items and applicable set bonuses
   const totals = useMemo(() => {
@@ -1003,14 +1233,27 @@ export default function Planner({ variant = 'grid' }) {
       return null;
     };
     const out = Object.fromEntries(keys.map((k) => [k, 0]));
-    const items = Object.values(equipped).filter(Boolean);
-    // Base item stats
-    for (const it of items) {
-      const stats = it?.details?.stats || [];
-      for (const s of stats) {
+    const entries = Object.entries(equipped).filter(([, it]) => !!it);
+    const addStats = (sourceName, statsArr) => {
+      for (const s of statsArr) {
         if (s?.unit === '%') continue; // ignore percent for core totals
         const key = mapKey(s?.stat);
         if (key && typeof s?.value === 'number') out[key] += s.value;
+      }
+    };
+    // Base item stats
+    for (const [hostName, it] of entries) {
+      const stats = it?.details?.stats || [];
+      addStats(it.name, stats);
+      const hostTal = talismans?.[hostName] || [];
+      const maxTal = Number(it?.details?.talismanSlots || 0) || 0;
+      if (Array.isArray(hostTal) && maxTal > 0) {
+        for (let i = 0; i < Math.min(hostTal.length, maxTal); i++) {
+          const t = hostTal[i];
+          if (!t) continue;
+          const tstats = t?.details?.stats || t?.stats || [];
+          addStats(t.name || 'Talisman', tstats);
+        }
       }
     }
     // Set bonuses
@@ -1070,13 +1313,13 @@ export default function Planner({ variant = 'grid' }) {
       }
     }
     return out;
-  }, [equipped, setsIndex]);
+  }, [equipped, talismans, setsIndex]);
 
   // defenses block moved below activeSetBonuses to avoid TDZ
 
   // Compute active set bonuses for display
   const activeSetBonuses = useMemo(() => {
-    const items = Object.values(equipped).filter(Boolean);
+  const items = Object.values(equipped).filter(Boolean);
     if (!items.length) return [];
     const normalize = (s) => (s || '').trim().toLowerCase();
     const variantOf = (n) => {
@@ -1170,9 +1413,9 @@ export default function Planner({ variant = 'grid' }) {
       if (/healing.*crit|crit.*healing/.test(n)) return { cat: 'mag', key: 'Healing Critical Bonus', pct: true };
       return null;
     };
-    const items = Object.values(equipped).filter(Boolean);
+  const entries = Object.entries(equipped).filter(([, it]) => !!it);
     // Items: base armor and stats
-    for (const it of items) {
+  for (const [hostName, it] of entries) {
       const det = it?.details || {};
       const armorVal = typeof det?.armor === 'number' ? det.armor : undefined;
       if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) {
@@ -1192,6 +1435,26 @@ export default function Planner({ variant = 'grid' }) {
         add(catAgg, m.key, kind, v);
         addSrc(catSrc, m.key, it.name, kind, v);
       }
+      // Add talismans attached to this gear
+      const hostTal = talismans?.[hostName] || [];
+      const maxTal = Number(it?.details?.talismanSlots || 0) || 0;
+      for (let i = 0; i < Math.min(hostTal.length, maxTal); i++) {
+        const t = hostTal[i];
+        if (!t) continue;
+        const tstats = Array.isArray(t?.details?.stats) ? t.details.stats : (Array.isArray(t?.stats) ? t.stats : []);
+        for (const s of tstats) {
+          const nm = title(s?.stat);
+          const v = typeof s?.value === 'number' ? s.value : 0;
+          if (!v) continue;
+          const m = canon(nm, s?.unit === '%');
+          if (!m) continue;
+          const catAgg = m.cat === 'def' ? defAgg : m.cat === 'off' ? offAgg : magAgg;
+          const catSrc = m.cat === 'def' ? defSrc : m.cat === 'off' ? offSrc : magSrc;
+          const kind = m.pct ? 'pct' : (s?.unit === '%' ? 'pct' : 'flat');
+          add(catAgg, m.key, kind, v);
+          addSrc(catSrc, m.key, `${t.name}`, kind, v);
+        }
+  }
     }
     // Active set bonuses: parse bonus lines
     for (const grp of (activeSetBonuses || [])) {
@@ -1250,7 +1513,7 @@ export default function Planner({ variant = 'grid' }) {
       offContrib: toContrib(offSrc, offenseOrder),
       magContrib: toContrib(magSrc, magicOrder),
     };
-  }, [equipped, activeSetBonuses]);
+  }, [equipped, talismans, activeSetBonuses]);
 
   // Primary stats contributions for tooltip
   const primaryContrib = useMemo(() => {
@@ -1275,14 +1538,27 @@ export default function Planner({ variant = 'grid' }) {
       cur.flat += val;
       bySrc.set(source, cur);
     };
-    const items = Object.values(equipped).filter(Boolean);
-    for (const it of items) {
+    const entries = Object.entries(equipped).filter(([, it]) => !!it);
+    for (const [hostName, it] of entries) {
       const stats = Array.isArray(it?.details?.stats) ? it.details.stats : [];
       for (const s of stats) {
         if (s?.unit === '%') continue;
         const key = mapKey(s?.stat);
         const v = typeof s?.value === 'number' ? s.value : 0;
         if (key && v) add(key, it.name, v);
+      }
+      const hostTal = talismans?.[hostName] || [];
+      const maxTal = Number(it?.details?.talismanSlots || 0) || 0;
+      for (let i = 0; i < Math.min(hostTal.length, maxTal); i++) {
+        const t = hostTal[i];
+        if (!t) continue;
+        const tstats = Array.isArray(t?.details?.stats) ? t.details.stats : (Array.isArray(t?.stats) ? t.stats : []);
+        for (const s of tstats) {
+          if (s?.unit === '%') continue;
+          const key = mapKey(s?.stat);
+          const v = typeof s?.value === 'number' ? s.value : 0;
+          if (key && v) add(key, t.name, v);
+        }
       }
     }
     for (const grp of (activeSetBonuses || [])) {
@@ -1296,7 +1572,7 @@ export default function Planner({ variant = 'grid' }) {
       }
     }
     return Object.fromEntries(Array.from(out.entries()).map(([label, bySrc]) => [label, Array.from(bySrc.entries()).map(([source, vals]) => ({ source, flat: vals.flat || 0 }))]));
-  }, [equipped, activeSetBonuses]);
+  }, [equipped, talismans, activeSetBonuses]);
 
   const Toolbar = (
     <div className={variant === 'classic' ? 'classic-toolbar' : 'toolbar'} style={{ display: 'flex', gap: 12 }}>
@@ -1316,7 +1592,7 @@ export default function Planner({ variant = 'grid' }) {
         Renown Rank:
         <input type="number" min={1} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
       </label>
-      <button onClick={() => setEquipped({})}>Reset Gear</button>
+  <button onClick={() => { setEquipped({}); setTalismans({}); }}>Reset Gear</button>
     </div>
   );
 
@@ -1332,16 +1608,23 @@ export default function Planner({ variant = 'grid' }) {
         }}
       >
         {Toolbar}
-        {slots.map((slot) => (
-          <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={equipped[slot.name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
-        ))}
+        {slots.map((slot) => {
+          const item = equipped[slot.name];
+          const talisCount = Number(item?.details?.talismanSlots || 0) || 0;
+          const tals = talismans?.[slot.name] || [];
+          return (
+            <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={item} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant}
+              talisCount={talisCount} talismans={tals} onTalisPick={openTalisPicker} onTalisClear={clearTalis}
+            />
+          );
+        })}
   <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
       </div>
       <ItemPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
-        slotName={pickerSlot}
+  slotName={pickerIsTalis ? `${pickerSlot} (Talisman)` : pickerSlot}
         onPick={onPick}
         loading={pickerLoading}
         error={pickerError}
@@ -1451,23 +1734,35 @@ export default function Planner({ variant = 'grid' }) {
               RR:
               <input type="number" min={0} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 64, marginLeft: 6 }} />
             </label>
-            <button onClick={() => setEquipped({})}>Reset</button>
+            <button onClick={() => { setEquipped({}); setTalismans({}); }}>Reset</button>
             {/* Max CR / RR removed per request */}
           </div>
           <div className="ror-armor ror-panel">
-            {leftArmorOrder.map((name) => (
-              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
-            ))}
+            {leftArmorOrder.map((name) => {
+              const it = equipped[name];
+              const tc = Number(it?.details?.talismanSlots || 0) || 0;
+              return (
+                <GearSlot key={name} name={name} item={it} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} talisCount={tc} talismans={talismans?.[name] || []} onTalisPick={openTalisPicker} onTalisClear={clearTalis} />
+              );
+            })}
           </div>
           <div className="ror-mid ror-panel">
-            {midOrder.map((name) => (
-              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
-            ))}
+            {midOrder.map((name) => {
+              const it = equipped[name];
+              const tc = Number(it?.details?.talismanSlots || 0) || 0;
+              return (
+                <GearSlot key={name} name={name} item={it} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} talisCount={tc} talismans={talismans?.[name] || []} onTalisPick={openTalisPicker} onTalisClear={clearTalis} />
+              );
+            })}
           </div>
           <div className="ror-jewels ror-panel">
-            {jewelOrder.map((name) => (
-              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
-            ))}
+            {jewelOrder.map((name) => {
+              const it = equipped[name];
+              const tc = Number(it?.details?.talismanSlots || 0) || 0;
+              return (
+                <GearSlot key={name} name={name} item={it} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} talisCount={tc} talismans={talismans?.[name] || []} onTalisPick={openTalisPicker} onTalisClear={clearTalis} />
+              );
+            })}
           </div>
           <div className="ror-stats">
             <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} />
@@ -1478,7 +1773,7 @@ export default function Planner({ variant = 'grid' }) {
           open={pickerOpen}
           onClose={() => setPickerOpen(false)}
           items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
-          slotName={pickerSlot}
+          slotName={pickerIsTalis ? `${pickerSlot} (Talisman)` : pickerSlot}
           onPick={onPick}
           loading={pickerLoading}
           error={pickerError}
