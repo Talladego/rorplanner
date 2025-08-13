@@ -889,7 +889,21 @@ export default function Planner({ variant = 'grid' }) {
           const careerMismatches = items.filter(it => Array.isArray(it.careerRestriction) && it.careerRestriction.length && !it.careerRestriction.includes(careerWanted)).length;
           console.debug('[Picker]', pickerSlot, 'raw=', (itemsRawCareer||[]).length, 'final=', items.length, 'slot-mismatch=', mismatchedSlot, 'career-mismatch=', careerMismatches);
         }
-        if (!ignore) setPickerItems(items);
+        if (!ignore) {
+          if (items && items.length) setPickerItems(items);
+          else {
+            // Fallback to static bundle if live query yields nothing (e.g., CORS blocked)
+            try {
+              const res = await fetch(`${BASE}data/items_ALL_SOVEREIGN.json`);
+              if (res.ok) {
+                const all = await res.json();
+                const slotNorm = (s) => (s || '').trim().toLowerCase();
+                const filtered = (all || []).filter(n => slotNorm((n.slot||'').replace(/_/g,' ')) === target || (String(n.slot||'').toUpperCase() === (isJewelryTarget ? 'JEWELLERY1' : '').toUpperCase()));
+                setPickerItems(filtered);
+              } else setPickerItems([]);
+            } catch { setPickerItems([]); }
+          }
+        }
       } catch (e) {
         if (!ignore) setPickerError(e);
       } finally {
