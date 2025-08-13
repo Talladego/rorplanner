@@ -7,11 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-  "preview": "vite preview",
-  "probe:gql": "node scripts/probe-graphql.js",
-  "gql:items": "node scripts/search-graphql-items.js",
-  "gql:enums": "node scripts/introspect-enums.js",
-  "audit:jewelry": "node scripts/audit-jewelry-locks.js"
+  "preview": "vite preview"
   
   },
   "dependencies": {
