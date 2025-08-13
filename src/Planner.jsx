@@ -401,6 +401,13 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
 function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly }) {
   if (!open) return null;
   const fmt = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const statOptions = useMemo(() => {
+    const all = [...statOrder, ...defenseOrder, ...offenseOrder, ...magicOrder];
+    const seen = new Set();
+    const out = [];
+    for (const s of all) { const k = String(s); if (!seen.has(k)) { seen.add(k); out.push(k); } }
+    return out;
+  }, []);
   const renderTooltip = (it) => {
     if (!it) return null;
     const rarity = String(it.rarity || it?.details?.rarity || '').toLowerCase();
@@ -472,7 +479,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
               title="Filter by stat"
             >
               <option value="">Any stat</option>
-              {statOrder.map((s) => (
+              {statOptions.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -699,21 +706,15 @@ export default function Planner({ variant = 'grid' }) {
     const isJewelrySlotName = (s) => /^jewelry slot [1-4]$/.test(normalize(s));
     const pickSlotNorm = normalize(pickerSlot || '');
     const itemSlotNorm = normalize(item?.slot || '');
-    // Strict jewelry slot-lock based on EquipSlot enum: JEWELLERY1 is unlocked; others locked to their slot
+    // Enforce jewelry rules silently (picker already filters; keep as safety)
     if (isJewelrySlotName(itemSlotNorm) && isJewelrySlotName(pickSlotNorm) && itemSlotNorm !== pickSlotNorm) {
       const raw = String(item?.slotRaw || item?.slot || '').toUpperCase();
-      if (raw !== 'JEWELLERY1') {
-      alert(`This jewel is locked to ${item.slot} and cannot be equipped in ${pickerSlot}.`);
-      return;
-      }
+      if (raw !== 'JEWELLERY1') return; // silently no-op
     }
     // Enforce uniqueEquipped from list data if available
     if (item?.uniqueEquipped) {
       const already = Object.values(equipped || {}).some((it) => it && String(it.id) === String(item.id));
-      if (already) {
-        alert('This item is unique and is already equipped in another slot.');
-        return;
-      }
+      if (already) return; // silently no-op
     }
     try {
       // Hydrate details so totals and bonuses work consistently
@@ -722,10 +723,7 @@ export default function Planner({ variant = 'grid' }) {
   const isUnique = detail?.uniqueEquipped ?? item?.uniqueEquipped;
   if (isUnique) {
         const already = Object.values(equipped || {}).some((it) => it && String(it.id) === String(detail?.id || item.id));
-        if (already) {
-          alert('This item is unique and is already equipped in another slot.');
-          return;
-        }
+        if (already) return; // silently no-op
       }
       const mapped = {
         id: String(detail?.id || item.id),
@@ -785,21 +783,11 @@ export default function Planner({ variant = 'grid' }) {
         const hostItem = equipped[host];
         const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
         const tMinRank = Number(detail?.levelRequirement || detail?.minimumRank || item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
-        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) {
-          alert(`Talisman Minimum Rank ${tMinRank} does not match host item level ${hostIlvl}.`);
-          setPickerOpen(false);
-          setPickerIsTalis(false);
-          return;
-        }
+        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
         const idStr = String(detail?.id || item.id);
         const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
-        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) {
-          alert('This talisman is already slotted on this item. Duplicate identical talismans are not allowed.');
-          setPickerOpen(false);
-          setPickerIsTalis(false);
-          return;
-        }
+        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) { setPickerOpen(false); setPickerIsTalis(false); return; }
         setTalismans((prev) => {
           const arr = Array.isArray(prev[host]) ? [...prev[host]] : [];
           arr[idx] = mapped;
@@ -815,21 +803,11 @@ export default function Planner({ variant = 'grid' }) {
         const hostItem = equipped[host];
         const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
         const tMinRank = Number(item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
-        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) {
-          alert(`Talisman Minimum Rank ${tMinRank} does not match host item level ${hostIlvl}.`);
-          setPickerOpen(false);
-          setPickerIsTalis(false);
-          return;
-        }
+        if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
         const idStr = String(item?.id);
         const existing = Array.isArray(talismans?.[host]) ? talismans[host] : [];
-        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) {
-          alert('This talisman is already slotted on this item. Duplicate identical talismans are not allowed.');
-          setPickerOpen(false);
-          setPickerIsTalis(false);
-          return;
-        }
+        if (existing.some((t, j) => t && j !== idx && String(t.id) === idStr)) { setPickerOpen(false); setPickerIsTalis(false); return; }
         setTalismans((prev) => {
           const arr = Array.isArray(prev[host]) ? [...prev[host]] : [];
           arr[idx] = item;
