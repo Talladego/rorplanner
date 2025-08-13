@@ -681,9 +681,7 @@ export default function Planner({ variant = 'grid' }) {
     let ignore = false;
     async function loadFromGraphQL() {
       if (!pickerOpen || !pickerSlot) return;
-  // Disable live GraphQL on GitHub Pages (static hosting, no proxy/CORS)
-  const disableGql = (typeof window !== 'undefined') && /github\.io$/i.test(window.location.hostname);
-  if (disableGql) return; // rely on local filteredItems fallback
+  // Live GraphQL enabled even on GitHub Pages; ensure endpoint allows CORS
       setPickerLoading(true);
       setPickerError(null);
     setPickerItems([]);

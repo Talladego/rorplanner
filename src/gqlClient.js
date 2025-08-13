@@ -1,18 +1,15 @@
-// On GitHub Pages, you cannot proxy /graphql. This app expects the API to be available
-// via the same origin under BASE + 'graphql' during local dev. For production on Pages,
-// either pre-bundle data under public/data and avoid live calls, or point to a CORS-enabled
-// absolute endpoint here.
-const BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/';
-const GQL_ENDPOINT = `${BASE}graphql`;
+// Use the public GraphQL API directly in production. Vite dev uses a proxy for '/graphql'.
+// If CORS is blocked by the API, host behind a proxy (e.g., Cloudflare Worker) or switch hosts.
+const GQL_ENDPOINT = (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+  ? '/graphql'
+  : 'https://production-api.waremu.com/graphql';
 
 async function post(query, variables) {
   const res = await fetch(GQL_ENDPOINT, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'accept': 'application/json',
-      'origin': 'https://killboard.returnofreckoning.com',
-      'referer': 'https://killboard.returnofreckoning.com/'
+      'accept': 'application/json'
     },
     body: JSON.stringify({ query, variables })
   });
