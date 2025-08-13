@@ -7,7 +7,7 @@ Checklist
 - [x] Install Required Extensions — None required for this workspace.
 - [x] Compile the Project — Vite build passes without errors.
 - [x] Create and Run Task — Skipped (not needed). Existing scrape task is available if required.
-- [ ] Launch the Project — Pending; launch on request.
+- [x] Launch the Project — Launched locally via Vite at http://localhost:5173/rorplanner/.
 - [x] Ensure Documentation is Complete — README updated; this file cleaned of HTML comments.
 
 Execution Guidelines

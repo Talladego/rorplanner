@@ -26,10 +26,24 @@ const slots = [
 const statOrder = [
   'Strength','Ballistic Skill','Intelligence','Toughness','Weapon Skill','Initiative','Willpower','Wounds'
 ];
+const defenseOrder = [
+  'Armor',
+  'Spiritual Resistance','Corporeal Resistance','Elemental Resistance',
+  'Block','Parry','Dodge','Disrupt'
+];
+const offenseOrder = [
+  'Melee Critical Hit Bonus','Melee Power',
+  'Ranged Critical Hit Bonus','Ranged Power',
+  'Armor Penetration'
+];
+const magicOrder = [
+  'Magic Critical Hit Bonus','Magic Power',
+  'Healing Critical Bonus','Healing Power'
+];
 
 // Revert to per-slot filtering only; no career/type weapon logic for now.
 
-function StatsPanel({ totals, activeSetBonuses, armorTotal = 0, resistTotals = { spirit: 0, elemental: 0, corporeal: 0 } }) {
+function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = [], magicList = [] }) {
   return (
     <div className="stats-panel">
       <div className="stats-lines">
@@ -41,23 +55,34 @@ function StatsPanel({ totals, activeSetBonuses, armorTotal = 0, resistTotals = {
         ))}
       </div>
       <div className="stats-separator" />
+      {/* Defense */}
       <div className="stats-lines">
-        <div className="stats-line">
-          <span className="label">Armor</span>
-          <span className="value">{armorTotal || 0}</span>
-        </div>
-        <div className="stats-line">
-          <span className="label">Spirit Resist</span>
-          <span className="value">{resistTotals.spirit || 0}</span>
-        </div>
-        <div className="stats-line">
-          <span className="label">Elemental Resist</span>
-          <span className="value">{resistTotals.elemental || 0}</span>
-        </div>
-        <div className="stats-line">
-          <span className="label">Corporeal Resist</span>
-          <span className="value">{resistTotals.corporeal || 0}</span>
-        </div>
+        {defenseList.map((s) => (
+          <div key={s.label} className="stats-line">
+            <span className="label">{s.label}</span>
+            <span className="value">{s.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="stats-separator" />
+      {/* Offense */}
+      <div className="stats-lines">
+        {offenseList.map((s) => (
+          <div key={s.label} className="stats-line">
+            <span className="label">{s.label}</span>
+            <span className="value">{s.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="stats-separator" />
+      {/* Magic */}
+      <div className="stats-lines">
+        {magicList.map((s) => (
+          <div key={s.label} className="stats-line">
+            <span className="label">{s.label}</span>
+            <span className="value">{s.value}</span>
+          </div>
+        ))}
       </div>
       {activeSetBonuses.length > 0 && (
         <div className="set-bonuses">
@@ -1009,50 +1034,97 @@ export default function Planner({ variant = 'grid' }) {
     return out;
   }, [equipped, setsIndex]);
 
-  // Compute armor and resistances (spirit/elemental/corporeal) from equipped and active set bonuses
-  const defenses = useMemo(() => {
-    const out = { armor: 0, spirit: 0, elemental: 0, corporeal: 0 };
+  // Compute Defense, Offense, Magic aggregated stats from equipped items and active set bonuses
+  const combatSections = useMemo(() => {
+    const mkAgg = () => new Map(); // label -> { flat: number, pct: number }
+    const defAgg = mkAgg();
+    const offAgg = mkAgg();
+    const magAgg = mkAgg();
+    const add = (agg, label, kind, val) => {
+      if (!label || !val) return;
+      const cur = agg.get(label) || { flat: 0, pct: 0 };
+      if (kind === 'pct') cur.pct += val; else cur.flat += val;
+      agg.set(label, cur);
+    };
+    const title = (s) => String(s || '').replace(/[_%]+/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+    const canon = (raw, unitIsPct = false) => {
+      const n = String(raw || '').trim().toLowerCase();
+      // Defenses
+      if (n === 'armor') return { cat: 'def', key: 'Armor', pct: unitIsPct };
+      if (n.includes('resist')) {
+        if (n.includes('spirit')) return { cat: 'def', key: 'Spiritual Resistance', pct: unitIsPct };
+        if (n.includes('elemental')) return { cat: 'def', key: 'Elemental Resistance', pct: unitIsPct };
+        if (n.includes('corporeal')) return { cat: 'def', key: 'Corporeal Resistance', pct: unitIsPct };
+      }
+      if (/(^|\s)block(\s|$)/.test(n)) return { cat: 'def', key: 'Block', pct: unitIsPct };
+      if (/(^|\s)parry(\s|$)/.test(n)) return { cat: 'def', key: 'Parry', pct: unitIsPct };
+      if (/(^|\s)dodge(\s|$)/.test(n)) return { cat: 'def', key: 'Dodge', pct: unitIsPct };
+      if (/(^|\s)disrupt(\s|$)/.test(n)) return { cat: 'def', key: 'Disrupt', pct: unitIsPct };
+      // Offense
+      if (/armor\s*pen(etration)?/.test(n)) return { cat: 'off', key: 'Armor Penetration', pct: unitIsPct };
+      if (/melee\s*power/.test(n)) return { cat: 'off', key: 'Melee Power', pct: unitIsPct };
+      if (/ranged\s*power/.test(n)) return { cat: 'off', key: 'Ranged Power', pct: unitIsPct };
+      if (/melee.*crit|crit.*melee/.test(n)) return { cat: 'off', key: 'Melee Critical Hit Bonus', pct: true };
+      if (/ranged.*crit|crit.*ranged/.test(n)) return { cat: 'off', key: 'Ranged Critical Hit Bonus', pct: true };
+      // Magic
+      if (/magic\s*power|spell\s*power/.test(n)) return { cat: 'mag', key: 'Magic Power', pct: unitIsPct };
+      if (/healing\s*power/.test(n)) return { cat: 'mag', key: 'Healing Power', pct: unitIsPct };
+      if (/(magic|spell).*crit|crit.*(magic|spell)/.test(n)) return { cat: 'mag', key: 'Magic Critical Hit Bonus', pct: true };
+      if (/healing.*crit|crit.*healing/.test(n)) return { cat: 'mag', key: 'Healing Critical Bonus', pct: true };
+      return null;
+    };
     const items = Object.values(equipped).filter(Boolean);
-    // Armor from item details
+    // Items: base armor and stats
     for (const it of items) {
       const det = it?.details || {};
-      let armorVal = det?.armor;
-      if (armorVal == null && det?.kv && det.kv.Armor != null) armorVal = det.kv.Armor;
-      if (typeof armorVal === 'string') {
-        const m = armorVal.match(/(\d+)/);
-        if (m) armorVal = parseInt(m[1], 10);
-      }
-      if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) out.armor += armorVal;
-      // Resistances from item stats
+      const armorVal = typeof det?.armor === 'number' ? det.armor : undefined;
+      if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) add(defAgg, 'Armor', 'flat', armorVal);
       const stats = Array.isArray(det?.stats) ? det.stats : [];
       for (const s of stats) {
-        const nm = String(s?.stat || '').toLowerCase();
-        const val = typeof s?.value === 'number' ? s.value : 0;
-        if (!val || s?.unit === '%') continue;
-        if (nm.includes('resist')) {
-          if (nm.includes('spirit')) out.spirit += val;
-          else if (nm.includes('elemental')) out.elemental += val;
-          else if (nm.includes('corporeal')) out.corporeal += val;
-        }
+        const nm = title(s?.stat);
+        const v = typeof s?.value === 'number' ? s.value : 0;
+        if (!v) continue;
+        const m = canon(nm, s?.unit === '%');
+        if (!m) continue;
+        add(m.cat === 'def' ? defAgg : m.cat === 'off' ? offAgg : magAgg, m.key, m.pct ? 'pct' : (s?.unit === '%' ? 'pct' : 'flat'), v);
       }
     }
-    // Add resistances from active set bonuses text lines
+    // Active set bonuses: parse bonus lines
     for (const grp of (activeSetBonuses || [])) {
       for (const b of (grp?.bonuses || [])) {
         const line = String(b?.bonus || '');
-        const m = line.match(/^\+\s*(\d+)\s+(.+)$/i);
-        if (!m) continue;
-        const val = parseInt(m[1], 10);
-        const label = m[2].toLowerCase();
-  if (label.includes('armor')) { out.armor += val; continue; }
-        if (label.includes('resist')) {
-          if (label.includes('spirit')) out.spirit += val;
-          else if (label.includes('elemental')) out.elemental += val;
-          else if (label.includes('corporeal')) out.corporeal += val;
+        let m = line.match(/^\+\s*(\d+(?:\.\d+)?)\s*%\s+(.+)$/i);
+        if (m) {
+          const val = parseFloat(m[1]);
+          const lab = title(m[2]);
+          const c = canon(lab, true);
+          if (c) add(c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg, c.key, 'pct', val);
+          continue;
+        }
+        m = line.match(/^\+\s*(\d+)\s+(.+)$/i);
+        if (m) {
+          const val = parseInt(m[1], 10);
+          const lab = title(m[2]);
+          const c = canon(lab, false);
+          if (c) add(c.cat === 'def' ? defAgg : c.cat === 'off' ? offAgg : magAgg, c.key, 'flat', val);
         }
       }
     }
-    return out;
+    const fmt = (flat, pct) => {
+      const parts = [];
+      if (flat) parts.push(String(flat));
+      if (pct) parts.push(`${Number.isInteger(pct) ? pct : pct.toFixed(2)}%`);
+      return parts.join(' + ') || '0';
+    };
+    const toList = (agg, order) => order.map((label) => {
+      const v = agg.get(label) || { flat: 0, pct: 0 };
+      return { label, value: fmt(v.flat, v.pct) };
+    });
+    return {
+      defenseList: toList(defAgg, defenseOrder),
+      offenseList: toList(offAgg, offenseOrder),
+      magicList: toList(magAgg, magicOrder),
+    };
   }, [equipped, activeSetBonuses]);
 
   const Toolbar = (
@@ -1092,7 +1164,7 @@ export default function Planner({ variant = 'grid' }) {
         {slots.map((slot) => (
           <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={equipped[slot.name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
         ))}
-        <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
+  <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
       </div>
       <ItemPicker
         open={pickerOpen}
@@ -1146,7 +1218,7 @@ export default function Planner({ variant = 'grid' }) {
           </div>
           <div className="classic-right">
             <div className="classic-stats">
-              <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
+              <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
             </div>
           </div>
           <div className="classic-bottom">
@@ -1227,7 +1299,7 @@ export default function Planner({ variant = 'grid' }) {
             ))}
           </div>
           <div className="ror-stats">
-            <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
+            <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} />
           </div>
         </div>
         </div>
