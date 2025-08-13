@@ -8,10 +8,13 @@ function App() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '8px 0 0 0' }}>
         <h1 style={{ color: '#eee', textAlign: 'center', margin: 0 }}>
-          RORplanner <span className="app-version" title={`Version ${appVersion}`}>v{appVersion}</span>
+          RORplanner
         </h1>
       </div>
       <RoRview />
+      <div className="app-footer">
+        <span className="app-version app-version-bottom" title={`Version ${appVersion}`}>v{appVersion}</span>
+      </div>
     </>
   );
 }

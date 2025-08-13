@@ -710,11 +710,15 @@ export default function Planner({ variant = 'grid' }) {
         // Fetch career-scoped; for jewelry, fetch with and without type filter and merge
   let itemsRawCareer = [];
         if (isJewelryTarget) {
-          // Query specific accessory equip slots (JEWELLERY1..4) without name-based filters
+          // Query specific accessory equip slots (JEWELLERY1..4). Merge career-scoped and no-career results.
+          // Some universal rings (e.g., Annulus) can be under-returned by usableByCareer for certain careers.
           const slotsToTry = ['JEWELLERY1', 'JEWELLERY2', 'JEWELLERY3', 'JEWELLERY4'];
-          const results = await Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })));
+          const [withCareerLists, withoutCareerLists] = await Promise.all([
+            Promise.all(slotsToTry.map(s => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true }))),
+            Promise.all(slotsToTry.map(s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: true })))
+          ]);
           const byId = new Map();
-          for (const arr of results) {
+          for (const arr of [...withCareerLists, ...withoutCareerLists]) {
             for (const it of (arr || [])) byId.set(String(it.id), it);
           }
           itemsRawCareer = Array.from(byId.values());
