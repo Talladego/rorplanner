@@ -1,11 +1,13 @@
 import './App.css';
-import Planner from './Planner';
+import RoRview from './RoRview';
 
 function App() {
   return (
     <>
-      <h1 style={{ color: '#eee', textAlign: 'center', marginBottom: 24 }}>RORplanner</h1>
-      <Planner />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '8px 0 0 0' }}>
+        <h1 style={{ color: '#eee', textAlign: 'center', margin: 0 }}>RORplanner</h1>
+      </div>
+      <RoRview />
     </>
   );
 }

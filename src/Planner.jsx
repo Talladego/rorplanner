@@ -5,6 +5,8 @@ import { CAREERS, DEFAULT_CAREER, getCareerDataPaths } from './config';
 
 const slots = [
   { name: "Event Item", gridArea: "event" },
+  { name: "Pocket 1", gridArea: "pocket1" },
+  { name: "Pocket 2", gridArea: "pocket2" },
   { name: "Helm", gridArea: "helm" },
   { name: "Shoulders", gridArea: "shoulders" },
   { name: "Cloak", gridArea: "cloak" },
@@ -25,7 +27,9 @@ const statOrder = [
   'Strength','Ballistic Skill','Intelligence','Toughness','Weapon Skill','Initiative','Willpower','Wounds'
 ];
 
-function StatsPanel({ totals, activeSetBonuses }) {
+// Revert to per-slot filtering only; no career/type weapon logic for now.
+
+function StatsPanel({ totals, activeSetBonuses, armorTotal = 0, resistTotals = { spirit: 0, elemental: 0, corporeal: 0 } }) {
   return (
     <div className="stats-panel">
       <div className="stats-lines">
@@ -35,6 +39,25 @@ function StatsPanel({ totals, activeSetBonuses }) {
             <span className="value">{totals[name] || 0}</span>
           </div>
         ))}
+      </div>
+      <div className="stats-separator" />
+      <div className="stats-lines">
+        <div className="stats-line">
+          <span className="label">Armor</span>
+          <span className="value">{armorTotal || 0}</span>
+        </div>
+        <div className="stats-line">
+          <span className="label">Spirit Resist</span>
+          <span className="value">{resistTotals.spirit || 0}</span>
+        </div>
+        <div className="stats-line">
+          <span className="label">Elemental Resist</span>
+          <span className="value">{resistTotals.elemental || 0}</span>
+        </div>
+        <div className="stats-line">
+          <span className="label">Corporeal Resist</span>
+          <span className="value">{resistTotals.corporeal || 0}</span>
+        </div>
       </div>
       {activeSetBonuses.length > 0 && (
         <div className="set-bonuses">
@@ -60,7 +83,9 @@ function StatsPanel({ totals, activeSetBonuses }) {
 const EMPTY_ICON = "https://armory.returnofreckoning.com/item/1";
 let ICON_FALLBACKS_CACHE = null;
 
-function GearSlot({ name, gridArea, item, allItems, iconFallbacks }) {
+function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid' }) {
+  const tipClass = `gear-tooltip`;
+  const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const buildSummary = () => {
     if (!item) return '';
     const det = item.details || {};
@@ -72,6 +97,128 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks }) {
       parts.push(`+${s.value} ${s.stat}`);
     }
     return parts.join(', ');
+  };
+  const buildTooltip = () => {
+    if (!item) return null;
+    const det = item.details || {};
+  const rarity = String(item.rarity || det.rarity || '').toLowerCase();
+    const il = Number(det.itemLevel || item.itemLevel || 0) || null;
+    const slotLabel = item.slot || name;
+    const armor = det.armor != null ? Number(String(det.armor).toString().match(/\d+/)?.[0] || 0) : null;
+    const dps = det.dps != null ? Number(det.dps) : null;
+    const speed = det.speed != null ? Number(det.speed) : null;
+    const talis = det.talismanSlots != null ? Number(det.talismanSlots) : null;
+    const reqCR = det.levelRequirement != null ? Number(det.levelRequirement) : null;
+    const reqRR = det.renownRankRequirement != null ? Number(det.renownRankRequirement) : null;
+    const unique = !!(item.uniqueEquipped || det.uniqueEquipped);
+    const stats = Array.isArray(det.stats) ? det.stats : [];
+    const setName = det.set?.name || det.itemSet?.name || '';
+    const setBonuses = Array.isArray(det.set?.bonuses)
+      ? det.set.bonuses
+      : Array.isArray(det.itemSet?.bonuses)
+        ? det.itemSet.bonuses.map(b => ({ pieces: b.itemsRequired, bonus: b.bonus?.__typename === 'ItemStat' ? `+ ${b.bonus.value}${b.bonus.percentage ? '% ' : ' '}${formatTitle(b.bonus.stat)}` : (b.bonus?.description || b.bonus?.name) }))
+        : [];
+    return (
+      <div className={`tooltip-card ${rarity ? 'rarity-' + rarity : ''}`} role="tooltip">
+        <div className="tooltip-header">
+          <img className="tooltip-icon" src={iconUrl} alt="" />
+          <div>
+            <div className={`tooltip-name${det?.set?.name || det?.itemSet?.name ? ' name-set' : ''}`}>{item.name}</div>
+          </div>
+        </div>
+        <div className="tooltip-body">
+          {/* Unlabeled meta lines */}
+          {(slotLabel || det?.type || il) && (
+            <div className="tooltip-section">
+              {slotLabel ? <div>{slotLabel}</div> : null}
+              {det?.type ? <div>{String(det.type).replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</div> : null}
+              {il ? <div>{il}</div> : null}
+            </div>
+          )}
+          {(typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0) ? (
+            <div className="tooltip-section">
+              <div className="section-title">Stats</div>
+              <ul className="stat-list">
+                {typeof armor === 'number' && armor > 0 ? (
+                  <li className="stat-line"><span className="val" style={{ minWidth: 0, textAlign: 'left' }}>{armor}</span><span className="label">Armor</span></li>
+                ) : null}
+                {typeof dps === 'number' && dps > 0 ? (
+                  <li className="stat-line"><span className="val" style={{ minWidth: 0, textAlign: 'left' }}>{dps.toFixed(2)}{typeof speed === 'number' && speed > 0 ? ` (Speed ${speed.toFixed(2)})` : ''}</span><span className="label">DPS</span></li>
+                ) : null}
+                {stats.map((s, i) => (
+                  <li key={i} className="stat-line">
+                    <span className="plus">+</span>
+                    <span className="val">{typeof s.value === 'number' ? s.value : ''}{s.percentage || s.unit === '%' ? '%' : ''}</span>
+                    <span className="label">{formatTitle(s.stat)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {/* Talisman slots as empty icons */}
+          {typeof talis === 'number' && talis > 0 && (
+            <div className="tooltip-section">
+              <div className="section-title">Talisman Slots</div>
+              <div className="talis-list">
+                {Array.from({ length: talis }).map((_, i) => (
+                  <div key={i} className="talis-line"><img className="talis-icon" src={'https://armory.returnofreckoning.com/icon/1'} alt="" /> Empty Talisman Slot</div>
+                ))}
+              </div>
+            </div>
+          )}
+      {(reqCR || reqRR || unique || (Array.isArray(item?.careerRestriction) && item.careerRestriction.length)) && (
+            <div className="tooltip-section">
+              <div className="section-title">Requirements</div>
+              <div className="req-lines">
+        {reqCR ? <div className="req-line req-cr">Minimum Rank: {reqCR}</div> : null}
+        {reqRR || reqRR === 0 ? <div className="req-line req-rr">Requires {reqRR} Renown</div> : null}
+        {unique ? <div className="req-line req-unique">Unique-Equipped</div> : null}
+        {Array.isArray(item?.careerRestriction) && item.careerRestriction.length ? (
+          <div className="req-line">Career: {item.careerRestriction.map(c => String(c).replaceAll('_', ' ')).join(', ')}</div>
+        ) : null}
+              </div>
+            </div>
+          )}
+          {Array.isArray(det?.abilities) && det.abilities.length > 0 && (
+            <div className="tooltip-section">
+              <div className="section-title">Abilities</div>
+              <ul className="set-list">
+                {det.abilities.map((ab, i) => (
+                  <li key={i} className="set-line">{ab.name || (ab.description ? ab.description.slice(0, 80) + (ab.description.length > 80 ? '…' : '') : 'Ability')}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {Array.isArray(det?.buffs) && det.buffs.length > 0 && (
+            <div className="tooltip-section">
+              <div className="section-title">Buffs</div>
+              <ul className="set-list">
+                {det.buffs.map((bf, i) => (
+                  <li key={i} className="set-line">{bf.name || (bf.description ? bf.description.slice(0, 80) + (bf.description.length > 80 ? '…' : '') : 'Buff')}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {det?.description && (
+            <div className="tooltip-section">
+              <div className="section-title">Description</div>
+              <div style={{ opacity: 0.95 }}>{det.description}</div>
+            </div>
+          )}
+          {setName && (
+            <div className="tooltip-section">
+              <div className="section-title">Set Info</div>
+              <div>{setName}</div>
+              <ul className="set-list">
+                {(setBonuses || []).map((b, i) => (
+                  <li key={i} className="set-line">({b.pieces} piece bonus): {b.bonus}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
   const computeSiblingFallback = () => {
     if (!item || !item.name) return null;
@@ -105,19 +252,57 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks }) {
     if (fb) return fb;
     return EMPTY_ICON;
   })();
-  const labelText = item?.name || name;
+  const itemLabel = item?.name || name;
   const summaryText = buildSummary();
-  const titleText = item ? (summaryText ? `${labelText} — ${summaryText}` : labelText) : labelText;
+  const titleText = item ? (summaryText ? `${itemLabel} — ${summaryText}` : itemLabel) : itemLabel;
+  const rarityStr = String(item?.rarity || item?.details?.rarity || '').toLowerCase();
+  const isSet = !!(item?.details?.set?.name || item?.details?.itemSet?.name);
+  const rarityClass = isSet ? 'name-set' : (rarityStr ? `rarity-${rarityStr}` : '');
+  if (variant !== 'grid') {
+    return (
+      <div className={variant === 'classic' ? 'classic-slot' : 'ror-slot'} style={gridArea ? { gridArea } : undefined}>
+    {variant === 'classic' && (<div className="slot-label">{name}</div>)}
+        {variant === 'ror' ? (() => {
+          const lvl = Number(item?.details?.itemLevel || item?.itemLevel || 0) || null;
+          const rightLines = item
+            ? [
+                String(itemLabel || '').trim() || name,
+                name,
+                lvl ? `Item Level ${lvl}` : null,
+              ].filter(Boolean)
+            : [name];
+          return (
+            <div className="slot-row">
+      <div className="gear-slot" data-slotname={name} title={titleText} aria-label={titleText}>
+                <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
+                <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
+              </div>
+        <div className="item-label-right" title={item ? `${itemLabel} — ${name}${lvl ? ` — iLvl ${lvl}` : ''}` : name}>
+                {rightLines.map((ln, idx) => (
+          <span key={idx} className={idx === 0 ? `line name-line ${rarityClass}` : 'line meta-line'}>{ln}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })() : (
+      <div className="gear-slot" data-slotname={name} title={titleText} aria-label={titleText}>
+            <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
+            <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="gear-slot" style={{ gridArea }} data-slotname={name} title={titleText} aria-label={titleText}>
       <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
-      <div className="gear-tooltip">{item ? (summaryText ? `${labelText} — ${summaryText}` : labelText) : ('Click to choose ' + name)}</div>
-      <div className="gear-label">{labelText}</div>
+      <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
+  <div className={`gear-label ${rarityClass}`}>{itemLabel}</div>
     </div>
   );
 }
 
-function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat }) {
+function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -144,8 +329,21 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
-            {(filterName || filterStat) && (
-              <button onClick={() => { setFilterName(''); setFilterStat(''); }}>Clear</button>
+            <select
+              value={filterRarity}
+              onChange={(e) => setFilterRarity(e.target.value)}
+              title="Filter by rarity"
+            >
+              <option value="">Any rarity</option>
+              <option value="UTILITY">Utility</option>
+              <option value="COMMON">Common</option>
+              <option value="UNCOMMON">Uncommon</option>
+              <option value="RARE">Rare</option>
+              <option value="VERY_RARE">Very Rare</option>
+              <option value="MYTHIC">Mythic</option>
+            </select>
+            {(filterName || filterStat || filterRarity) && (
+              <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); }}>Clear</button>
             )}
           </div>
           {loading && <div>Loading…</div>}
@@ -155,13 +353,15 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
           )}
           {!loading && !error && items && items.length > 0 && (
             <div className="item-list">
-              {items.map((it) => {
+      {items.map((it) => {
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
-                return (
+    const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
+    const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
+        return (
                   <button key={it.id} className="item-row" onClick={() => onPick(it)}>
                     <span className="item-left">
                       <img className="item-icon" src={icon} alt="" />
-                      <span className="item-name">{it.name}</span>
+          <span className={`item-name ${rarityClass}`}>{it.name}</span>
                     </span>
                     <span className="item-slot">{it.slot || ''}</span>
                   </button>
@@ -175,7 +375,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
   );
 }
 
-export default function Planner() {
+export default function Planner({ variant = 'grid' }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
   const [allItems, setAllItems] = useState([]);
@@ -184,6 +384,7 @@ export default function Planner() {
   const [renownRank, setRenownRank] = useState(80);
   const [filterName, setFilterName] = useState('');
   const [filterStat, setFilterStat] = useState('');
+  const [filterRarity, setFilterRarity] = useState('');
   const [maxCareerRank, setMaxCareerRank] = useState(100);
   const [maxRenownRank, setMaxRenownRank] = useState(100);
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
@@ -293,7 +494,9 @@ export default function Planner() {
       ['main hand', ['main hand', 'right hand', 'mainhand']],
       ['off hand', ['off hand', 'left hand', 'offhand']],
       ['ranged weapon', ['ranged', 'ranged weapon']],
-      ['event item', ['event', 'event item', 'pocket']],
+  ['event item', ['event', 'event item']],
+  ['pocket 1', ['pocket 1','pocket1']],
+  ['pocket 2', ['pocket 2','pocket2']],
   ['helm', ['helm']],
   ['shoulders', ['shoulder']],
   ['cloak', ['back']],
@@ -301,11 +504,11 @@ export default function Planner() {
   ['gloves', ['gloves']],
   ['belt', ['belt']],
   ['boots', ['boots']],
-  // Any jewelry slot should accept any normalized jewelry plus common labels and all 4 specific jewelry slot labels
-  ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-  ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-  ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-  ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
+  // Any jewelry slot should accept jewelry terms and the 4 specific jewelry slot labels (no pocket/potion)
+  ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+  ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+  ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+  ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
     ]);
     const target = normalize(pickerSlot);
     const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
@@ -354,6 +557,11 @@ export default function Planner() {
           const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
           if (!has) return false;
         }
+      // Rarity filter
+      if (filterRarity) {
+        const r = String(it?.rarity || it?.details?.rarity || '').toUpperCase();
+        if (r !== filterRarity) return false;
+      }
         return true;
       })
       .sort((a,b) => {
@@ -373,7 +581,7 @@ export default function Planner() {
       if (!prev) uniq.set(id, it);
     }
     return Array.from(uniq.values());
-  }, [allItems, pickerSlot, careerRank, renownRank, filterName, filterStat, maxCareerRank, maxRenownRank, career]);
+  }, [allItems, pickerSlot, careerRank, renownRank, filterName, filterStat, filterRarity, maxCareerRank, maxRenownRank, career]);
 
   const onPick = async (item) => {
     // Pre-validate: slot-locked jewelry and unique items
@@ -413,13 +621,26 @@ export default function Planner() {
         id: String(detail?.id || item.id),
         name: detail?.name || item.name,
         slot: detail?.slot || item.slot,
+        type: detail?.type || item?.type,
+        rarity: detail?.rarity || item?.rarity,
+        careerRestriction: Array.isArray(item?.careerRestriction) ? item.careerRestriction : undefined,
         career: career?.toUpperCase?.() || undefined,
         details: {
+          armor: typeof detail?.armor === 'number' ? detail.armor : (item?.details?.armor ?? undefined),
           iconUrl: detail?.iconUrl || item.iconUrl,
           iconId: undefined,
           itemLevel: detail?.itemLevel,
           renownRank: detail?.renownRankRequirement,
           renownRankRequirement: detail?.renownRankRequirement,
+          rarity: detail?.rarity || item?.rarity,
+          type: detail?.type || item?.type,
+          dps: detail?.dps,
+          speed: detail?.speed,
+          talismanSlots: detail?.talismanSlots,
+          levelRequirement: detail?.levelRequirement,
+          description: detail?.description,
+          abilities: Array.isArray(detail?.abilities) ? detail.abilities : [],
+          buffs: Array.isArray(detail?.buffs) ? detail.buffs : [],
           stats: Array.isArray(detail?.stats)
             ? detail.stats.map(s => ({
                 stat: (s?.stat || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
@@ -447,7 +668,7 @@ export default function Planner() {
           } : undefined,
         },
       };
-      if (pickerSlot) setEquipped((prev) => ({ ...prev, [pickerSlot]: mapped }));
+  if (pickerSlot) setEquipped((prev) => ({ ...prev, [pickerSlot]: mapped }));
     } catch {
       if (pickerSlot) setEquipped((prev) => ({ ...prev, [pickerSlot]: item }));
     } finally {
@@ -471,7 +692,9 @@ export default function Planner() {
           ['main hand', ['main hand', 'right hand', 'mainhand']],
           ['off hand', ['off hand', 'left hand', 'offhand']],
           ['ranged weapon', ['ranged', 'ranged weapon']],
-          ['event item', ['event', 'event item', 'pocket']],
+          ['event item', ['event', 'event item']],
+          ['pocket 1', ['pocket 1','pocket1']],
+          ['pocket 2', ['pocket 2','pocket2']],
           ['helm', ['helm']],
           ['shoulders', ['shoulder']],
           ['cloak', ['back']],
@@ -479,10 +702,15 @@ export default function Planner() {
           ['gloves', ['gloves']],
           ['belt', ['belt']],
           ['boots', ['boots']],
-          ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-          ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-          ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
-          ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', 'pocket', 'potion', ...jewelrySlots]],
+          ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+          ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+          ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+          ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+            // Any jewelry slot should accept jewelry terms and the 4 specific jewelry slot labels (no pocket/potion)
+            ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+            ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+            ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
+            ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
         ]);
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
@@ -498,20 +726,39 @@ export default function Planner() {
           }
           itemsRawCareer = Array.from(byId.values());
         } else {
-          itemsRawCareer = await fetchSovereignItems({ career, perPage: 50, totalLimit: 200 });
+          // Ask server for exact slot
+          const slotEnum = (() => {
+            if (target === 'helm') return 'HELM';
+            if (target === 'shoulders') return 'SHOULDER';
+            if (target === 'cloak') return 'BACK';
+            if (target === 'body') return 'BODY';
+            if (target === 'gloves') return 'GLOVES';
+            if (target === 'belt') return 'BELT';
+            if (target === 'boots') return 'BOOTS';
+            if (target === 'main hand') return 'MAIN_HAND';
+            if (target === 'off hand') return 'OFF_HAND';
+            if (target === 'ranged weapon') return 'RANGED_WEAPON';
+            if (target === 'event item') return 'EVENT_ITEM';
+            if (target === 'pocket 1') return 'POCKET1';
+            if (target === 'pocket 2') return 'POCKET2';
+            return undefined;
+          })();
+          itemsRawCareer = await fetchSovereignItems({ career, perPage: 50, totalLimit: 200, slotEq: slotEnum });
         }
         // Apply client-side slot filtering to handle naming differences (e.g., jewelry)
         const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
-        const friendlySlot = (s) => {
+          const friendlySlot = (s) => {
           const raw = String(s || '').toUpperCase();
           if (/^JEWELLERY([1-4])$/.test(raw)) {
             const n = raw.slice(-1);
             return `jewelry slot ${n}`;
           }
-          if (/^POCKET[12]$/.test(raw)) return 'pocket';
+            if (raw === 'POCKET1') return 'pocket 1';
+            if (raw === 'POCKET2') return 'pocket 2';
+            if (raw === 'EVENT_ITEM') return 'event item';
           return raw.replace(/_/g, ' ').toLowerCase();
         };
-        const isAccessoryLike = (s) => /^(accessory|accessories|jewellery|jewelry|neck|ring|pocket)$/.test(String(s||''));
+        // No broad accessory-like fallback; rely on exact mapping and raw equip slot checks
         const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
         const itemsPre = (itemsRawCareer || [])
           .map((n) => ({ ...n, slotRaw: n.slot, slot: friendlySlot(n.slot) }));
@@ -523,7 +770,24 @@ export default function Planner() {
               // JEWELLERY1 = unlocked; JEWELLERY2/3/4 = locked to that slot
               return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
             }
-            return acceptable.includes(ns) || isAccessoryLike(ns);
+            // For non-jewelry slots, require exact mapping or exact raw enum
+            const rawMatch = (() => {
+              if (target === 'helm') return raw === 'HELM';
+              if (target === 'shoulders') return raw === 'SHOULDER';
+              if (target === 'cloak') return raw === 'BACK';
+              if (target === 'body') return raw === 'BODY';
+              if (target === 'gloves') return raw === 'GLOVES';
+              if (target === 'belt') return raw === 'BELT';
+              if (target === 'boots') return raw === 'BOOTS';
+              if (target === 'main hand') return raw === 'MAIN_HAND';
+              if (target === 'off hand') return raw === 'OFF_HAND';
+              if (target === 'ranged weapon') return raw === 'RANGED_WEAPON';
+              if (target === 'event item') return raw === 'EVENT_ITEM';
+              if (target === 'pocket 1') return raw === 'POCKET1';
+              if (target === 'pocket 2') return raw === 'POCKET2';
+              return false;
+            })();
+            return acceptable.includes(ns) || rawMatch;
           })
           .filter((n) => {
             // Rank caps
@@ -538,6 +802,11 @@ export default function Planner() {
               const stats = n?.stats || [];
               const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
               if (!has) return false;
+            }
+            // Rarity filter
+            if (filterRarity) {
+              const r = String(n?.rarity || '').toUpperCase();
+              if (r !== filterRarity) return false;
             }
             return true;
           })
@@ -628,7 +897,7 @@ export default function Planner() {
     }
     loadFromGraphQL();
     return () => { ignore = true; };
-  }, [pickerOpen, pickerSlot, career, renownRank, equipped, filterName, filterStat, maxCareerRank, maxRenownRank]);
+  }, [pickerOpen, pickerSlot, career, renownRank, equipped, filterName, filterStat, filterRarity, maxCareerRank, maxRenownRank]);
 
   // Aggregate primary stats from equipped items and applicable set bonuses
   const totals = useMemo(() => {
@@ -715,6 +984,8 @@ export default function Planner() {
     return out;
   }, [equipped, setsIndex]);
 
+  // defenses block moved below activeSetBonuses to avoid TDZ
+
   // Compute active set bonuses for display
   const activeSetBonuses = useMemo(() => {
     const items = Object.values(equipped).filter(Boolean);
@@ -761,7 +1032,83 @@ export default function Planner() {
     return out;
   }, [equipped, setsIndex]);
 
-  return (
+  // Compute armor and resistances (spirit/elemental/corporeal) from equipped and active set bonuses
+  const defenses = useMemo(() => {
+    const out = { armor: 0, spirit: 0, elemental: 0, corporeal: 0 };
+    const items = Object.values(equipped).filter(Boolean);
+    // Armor from item details
+    for (const it of items) {
+      const det = it?.details || {};
+      let armorVal = det?.armor;
+      if (armorVal == null && det?.kv && det.kv.Armor != null) armorVal = det.kv.Armor;
+      if (typeof armorVal === 'string') {
+        const m = armorVal.match(/(\d+)/);
+        if (m) armorVal = parseInt(m[1], 10);
+      }
+      if (typeof armorVal === 'number' && !Number.isNaN(armorVal)) out.armor += armorVal;
+      // Resistances from item stats
+      const stats = Array.isArray(det?.stats) ? det.stats : [];
+      for (const s of stats) {
+        const nm = String(s?.stat || '').toLowerCase();
+        const val = typeof s?.value === 'number' ? s.value : 0;
+        if (!val || s?.unit === '%') continue;
+        if (nm.includes('resist')) {
+          if (nm.includes('spirit')) out.spirit += val;
+          else if (nm.includes('elemental')) out.elemental += val;
+          else if (nm.includes('corporeal')) out.corporeal += val;
+        }
+      }
+    }
+    // Add resistances from active set bonuses text lines
+    for (const grp of (activeSetBonuses || [])) {
+      for (const b of (grp?.bonuses || [])) {
+        const line = String(b?.bonus || '');
+        const m = line.match(/^\+\s*(\d+)\s+(.+)$/i);
+        if (!m) continue;
+        const val = parseInt(m[1], 10);
+        const label = m[2].toLowerCase();
+  if (label.includes('armor')) { out.armor += val; continue; }
+        if (label.includes('resist')) {
+          if (label.includes('spirit')) out.spirit += val;
+          else if (label.includes('elemental')) out.elemental += val;
+          else if (label.includes('corporeal')) out.corporeal += val;
+        }
+      }
+    }
+    return out;
+  }, [equipped, activeSetBonuses]);
+
+  const Toolbar = (
+    <div className={variant === 'classic' ? 'classic-toolbar' : 'toolbar'} style={{ display: 'flex', gap: 12 }}>
+      <label>
+        Career:
+        <select value={career} onChange={(e) => setCareer(e.target.value)} style={{ marginLeft: 6 }}>
+          {CAREERS.map((c) => (
+            <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Career Rank:
+        <input type="number" min={1} max={100} value={careerRank} onChange={(e) => setCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
+      </label>
+      <label>
+        Renown Rank:
+        <input type="number" min={1} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
+      </label>
+      <button onClick={() => setEquipped({})}>Reset Gear</button>
+      <label>
+        Max Rank:
+        <input type="number" min={1} max={100} value={maxCareerRank} onChange={(e) => setMaxCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
+      </label>
+      <label>
+        Max Renown:
+        <input type="number" min={0} max={100} value={maxRenownRank} onChange={(e) => setMaxRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
+      </label>
+    </div>
+  );
+
+  const renderGrid = () => (
     <div className="planner-container">
       <div
         className="planner-grid"
@@ -772,37 +1119,11 @@ export default function Planner() {
           setPickerOpen(true);
         }}
       >
-        <div className="toolbar" style={{ display: 'flex', gap: 12 }}>
-          <label>
-            Career:
-            <select value={career} onChange={(e) => setCareer(e.target.value)} style={{ marginLeft: 6 }}>
-              {CAREERS.map((c) => (
-                <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Career Rank:
-            <input type="number" min={1} max={100} value={careerRank} onChange={(e) => setCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-          </label>
-          <label>
-            Renown Rank:
-            <input type="number" min={1} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-          </label>
-          <button onClick={() => setEquipped({})}>Reset Gear</button>
-          <label>
-            Max Rank:
-            <input type="number" min={1} max={100} value={maxCareerRank} onChange={(e) => setMaxCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-          </label>
-          <label>
-            Max Renown:
-            <input type="number" min={0} max={100} value={maxRenownRank} onChange={(e) => setMaxRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 70, marginLeft: 6 }} />
-          </label>
-        </div>
-  {slots.map((slot) => (
-          <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={equipped[slot.name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} />
+        {Toolbar}
+        {slots.map((slot) => (
+          <GearSlot key={slot.name} name={slot.name} gridArea={slot.gridArea} item={equipped[slot.name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
         ))}
-  <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} />
+        <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
       </div>
       <ItemPicker
         open={pickerOpen}
@@ -812,11 +1133,153 @@ export default function Planner() {
         onPick={onPick}
         loading={pickerLoading}
         error={pickerError}
-  filterName={filterName}
-  setFilterName={setFilterName}
-  filterStat={filterStat}
+        filterName={filterName}
+        setFilterName={setFilterName}
+        filterStat={filterStat}
   setFilterStat={setFilterStat}
+  filterRarity={filterRarity}
+  setFilterRarity={setFilterRarity}
       />
     </div>
   );
+
+  const renderClassic = () => {
+    const byName = Object.fromEntries(slots.map(s => [s.name, s]));
+  const leftArmorOrder = ['Helm', 'Shoulders', 'Cloak', 'Body', 'Gloves', 'Belt', 'Boots'];
+    const jewelOrder = ['Jewelry Slot 1', 'Jewelry Slot 2', 'Jewelry Slot 3', 'Jewelry Slot 4'];
+    const bottomWeapons = ['Main Hand', 'Off Hand', 'Ranged Weapon'];
+    return (
+      <div className="classic-container">
+        <div
+          className="classic-root"
+          onClick={(e) => {
+            const el = e.target.closest('.gear-slot');
+            if (!el) return;
+            setPickerSlot(el.getAttribute('data-slotname'));
+            setPickerOpen(true);
+          }}
+        >
+          {Toolbar}
+          <div className="classic-gear-left">
+            {leftArmorOrder.map((name) => {
+              const s = byName[name];
+              if (!s) return null;
+              return (
+                <GearSlot key={name} name={name} gridArea={undefined} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+              );
+            })}
+          </div>
+          <div className="classic-doll" />
+          <div className="classic-jewels">
+            {jewelOrder.map((name) => (
+              <GearSlot key={name} name={name} gridArea={undefined} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
+          </div>
+          <div className="classic-right">
+            <div className="classic-stats">
+              <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
+            </div>
+          </div>
+          <div className="classic-bottom">
+            {bottomWeapons.map((name) => (
+              <GearSlot key={name} name={name} gridArea={undefined} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
+          </div>
+        </div>
+        <ItemPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
+          slotName={pickerSlot}
+          onPick={onPick}
+          loading={pickerLoading}
+          error={pickerError}
+          filterName={filterName}
+          setFilterName={setFilterName}
+          filterStat={filterStat}
+          setFilterStat={setFilterStat}
+          filterRarity={filterRarity}
+          setFilterRarity={setFilterRarity}
+        />
+      </div>
+    );
+  };
+
+  const renderRor = () => {
+    const byName = Object.fromEntries(slots.map(s => [s.name, s]));
+  const leftArmorOrder = ['Helm', 'Shoulders', 'Cloak', 'Body', 'Gloves', 'Belt', 'Boots'];
+  const midOrder = ['Main Hand', 'Off Hand', 'Ranged Weapon', 'Event Item', 'Pocket 1', 'Pocket 2'];
+    const jewelOrder = ['Jewelry Slot 1', 'Jewelry Slot 2', 'Jewelry Slot 3', 'Jewelry Slot 4'];
+    return (
+      <div className="ror-container">
+        <div className="ror-frame">
+        <div
+          className="ror-root"
+          onClick={(e) => {
+            const el = e.target.closest('.gear-slot');
+            if (!el) return;
+            setPickerSlot(el.getAttribute('data-slotname'));
+            setPickerOpen(true);
+          }}
+        >
+          <div className="ror-toolbar ror-panel">
+            <label>
+              Career:
+              <select value={career} onChange={(e) => setCareer(e.target.value)} style={{ marginLeft: 6 }}>
+                {CAREERS.map((c) => (
+                  <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              CR:
+              <input type="number" min={1} max={100} value={careerRank} onChange={(e) => setCareerRank(parseInt(e.target.value || 0, 10))} style={{ width: 64, marginLeft: 6 }} />
+            </label>
+            <label>
+              RR:
+              <input type="number" min={0} max={100} value={renownRank} onChange={(e) => setRenownRank(parseInt(e.target.value || 0, 10))} style={{ width: 64, marginLeft: 6 }} />
+            </label>
+            <button onClick={() => setEquipped({})}>Reset</button>
+            {/* Max CR / RR removed per request */}
+          </div>
+          <div className="ror-armor ror-panel">
+            {leftArmorOrder.map((name) => (
+              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
+          </div>
+          <div className="ror-mid ror-panel">
+            {midOrder.map((name) => (
+              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
+          </div>
+          <div className="ror-jewels ror-panel">
+            {jewelOrder.map((name) => (
+              <GearSlot key={name} name={name} item={equipped[name]} allItems={allItems} iconFallbacks={iconFallbacks || {}} variant={variant} />
+            ))}
+          </div>
+          <div className="ror-stats">
+            <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} armorTotal={defenses.armor} resistTotals={{ spirit: defenses.spirit, elemental: defenses.elemental, corporeal: defenses.corporeal }} />
+          </div>
+        </div>
+        </div>
+        <ItemPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          items={pickerItems && pickerItems.length ? pickerItems : filteredItems}
+          slotName={pickerSlot}
+          onPick={onPick}
+          loading={pickerLoading}
+          error={pickerError}
+          filterName={filterName}
+          setFilterName={setFilterName}
+          filterStat={filterStat}
+          setFilterStat={setFilterStat}
+          filterRarity={filterRarity}
+          setFilterRarity={setFilterRarity}
+        />
+      </div>
+    );
+  };
+
+  return variant === 'ror' ? renderRor() : variant === 'classic' ? renderClassic() : renderGrid();
 }

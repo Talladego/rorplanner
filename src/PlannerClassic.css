@@ -1,0 +1,93 @@
+
+.classic-container {
+  display: flex;
+  width: 100vw;
+  min-height: 640px;
+  background: #181818;
+  color: #eee;
+  box-sizing: border-box;
+  padding: 24px 24px 48px 24px;
+}
+
+.classic-root {
+  display: grid;
+  grid-template-columns: 200px 320px 140px 360px; /* left gear, doll, jewels, stats */
+  gap: 24px;
+  margin: 0 auto;
+  background: #202020;
+  border: 1px solid #2e2e2e;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+
+.classic-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.classic-toolbar label { display: inline-flex; gap: 6px; align-items: center; }
+.classic-toolbar select, .classic-toolbar input[type="number"] {
+  background: #181818; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px 8px;
+}
+
+/* Left gear panel: two narrow columns like a paper-doll layout */
+.classic-gear-left {
+  display: grid;
+  grid-template-columns: 72px; /* single column for armor + rings */
+  grid-auto-rows: 96px; /* room for label + 72px square icon */
+  gap: 10px;
+  align-content: start;
+  justify-items: center;
+  align-items: start;
+}
+
+/* Center paper-doll placeholder */
+.classic-doll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #1a1a1a, #121212);
+  border: 1px solid #2c2c2c;
+  border-radius: 12px;
+  position: relative;
+  min-height: 540px;
+}
+.classic-doll::after {
+  content: "";
+  width: 140px; height: 340px; border-radius: 70px; opacity: 0.08;
+  background: #fff; position: absolute;
+}
+
+.classic-container .gear-slot { width: 72px; height: 72px; }
+.classic-container .gear-icon { border-radius: 8px; }
+.classic-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.classic-slot .slot-label { font-size: 0.78rem; color: #ddd; opacity: 0.95; text-align: center; line-height: 1; }
+.classic-container .gear-icon { top: 0; height: 100%; }
+
+/* Right stats panel */
+.classic-right { display: flex; flex-direction: column; gap: 12px; align-self: start; }
+.classic-jewels {
+  display: grid;
+  grid-template-columns: 72px; /* single column for jewels */
+  grid-auto-rows: 96px; /* room for label + 72px square icon */
+  gap: 10px;
+  justify-items: center;
+  align-items: start;
+}
+.classic-stats { display: flex; flex-direction: column; gap: 8px; }
+.classic-stats .stats-panel { position: sticky; top: 20px; }
+
+/* Smaller labels in classic column */
+.classic-container .gear-label {
+  font-size: 0.72rem;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
+/* Bottom weapon row centered under the doll */
+.classic-bottom {
+  grid-column: 1 / -1; display: flex; justify-content: center; gap: 14px; margin-top: 8px;
+}

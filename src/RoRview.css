@@ -1,0 +1,60 @@
+:root{
+  --ror-bg: #0b0b0c;
+  --ror-panel: #111215;
+  --ror-border: #252831;
+  --ror-accent: #2bb3ff;
+  --ror-text: #cfd6e6;
+}
+
+.ror-container{
+  display:flex;
+  justify-content:center; /* center frame */
+  width:100%; min-height:640px; /* avoid 100vw scrollbar overflow */
+  background: linear-gradient(180deg, #0b0b0c, #0d0e12 70%);
+  color: var(--ror-text);
+  box-sizing:border-box;
+  padding: 0; /* let frame control outer spacing for snug alignment */
+  margin: 0 auto; /* equal left/right spacing */
+  overflow: hidden; /* hide both axes scrollbars within the container */
+}
+.ror-frame{
+  background: var(--ror-panel);
+  border: 1px solid var(--ror-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  padding: 12px; /* slight inset around grid */
+  margin: 8px; /* minimal breathing room against container edges */
+  width: fit-content; /* shrink to grid */
+  max-width: 96vw; /* responsive */
+}
+.ror-root{
+  display:grid;
+  grid-template-columns: 220px 220px 220px 360px; /* armor | weapons/event/pockets | jewels | stats */
+  gap:12px; /* tighter gaps */
+  margin:0; /* left-align grid within frame */
+  width:auto; /* natural width based on columns */
+}
+.ror-panel{ background: var(--ror-panel); border:1px solid var(--ror-border); border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+.ror-toolbar{ grid-column:1 / -1; display:flex; gap:8px; align-items:center; padding:6px 8px; background: linear-gradient(180deg, #111215, #0f1013); border:1px solid var(--ror-border); border-radius:8px; }
+.ror-toolbar select,.ror-toolbar input,.ror-toolbar button{ background:#0e1014; color:var(--ror-text); border:1px solid #2a2f3b; border-radius:6px; padding:6px 8px; }
+.ror-toolbar button{ cursor:pointer; }
+
+.ror-armor{ display:flex; flex-direction:column; gap:8px; align-content:start; padding:8px; }
+.ror-mid{ display:flex; flex-direction:column; gap:8px; align-content:start; padding:8px; }
+.ror-jewels{ display:flex; flex-direction:column; gap:8px; align-content:start; padding:8px; }
+.ror-stats{ display:flex; flex-direction:column; gap:10px; }
+.ror-stats .stats-panel{ background: var(--ror-panel); border:1px solid var(--ror-border); }
+
+/* slot wrapper and icon */
+.ror-slot{ display:flex; flex-direction:column; gap:6px; }
+.ror-slot .slot-label{ font-size:0.78rem; color: var(--ror-text); opacity:0.95; }
+.ror-slot .slot-row{ display:flex; align-items:flex-start; gap:8px; min-width:0; }
+.ror-slot .item-label-right{ display:flex; flex-direction:column; gap:2px; min-width:0; text-align:left; }
+.ror-slot .item-label-right .line{ display:block; font-size:0.78rem; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ror-slot .item-label-right .name-line{ font-weight:600; /* color comes from rarity/set class */ }
+.ror-slot .item-label-right .meta-line{ opacity:0.8; color: var(--ror-text); }
+.ror-container .gear-slot{ width:72px; height:72px; background: radial-gradient(40px 40px at 50% 50%, rgba(43,179,255,0.06), transparent), #0e1016; border:1px solid #2a2f3b; border-radius:6px; flex:0 0 auto; }
+.ror-container .gear-slot:hover{ box-shadow: 0 0 0 1px var(--ror-accent) inset; }
+.ror-container .gear-icon{ border-radius:6px; top:0; height:100%; }
+
+/* bottom weapons removed in 3-column layout */
