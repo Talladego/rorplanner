@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchSovereignItems, fetchItemDetails } from './gqlClient';
 import './Planner.css';
-import { CAREERS, DEFAULT_CAREER, getCareerDataPaths, BASE } from './config';
+import { CAREERS, DEFAULT_CAREER } from './config';
 
 const slots = [
   { name: "Event Item", gridArea: "event" },
@@ -378,7 +378,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
 export default function Planner({ variant = 'grid' }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
-  const [allItems, setAllItems] = useState([]);
+  const [allItems, setAllItems] = useState([]); // legacy; no static preload
   const [career, setCareer] = useState(DEFAULT_CAREER);
   const [careerRank, setCareerRank] = useState(40);
   const [renownRank, setRenownRank] = useState(80);
@@ -388,80 +388,17 @@ export default function Planner({ variant = 'grid' }) {
   const [maxCareerRank, setMaxCareerRank] = useState(100);
   const [maxRenownRank, setMaxRenownRank] = useState(100);
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
-  const [iconFallbacks, setIconFallbacks] = useState(null);
-  const [setsIndex, setSetsIndex] = useState(null);
+  const [iconFallbacks, setIconFallbacks] = useState(null); // no remote fallbacks on Pages
+  const [setsIndex, setSetsIndex] = useState(null); // no static sets index on Pages
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState(null);
 
-  // Load items for selected career from available data sources
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const urls = getCareerDataPaths(career);
-      const byId = new Map();
-      const pickBetter = (a, b) => {
-        if (!a) return b;
-        if (!b) return a;
-        const ad = a?.details || {}; const bd = b?.details || {};
-        const as = (ad.stats?.length ? 1 : 0) + (ad.iconId ? 1 : 0) + (ad.set?.bonuses?.length ? 1 : 0);
-        const bs = (bd.stats?.length ? 1 : 0) + (bd.iconId ? 1 : 0) + (bd.set?.bonuses?.length ? 1 : 0);
-        return bs > as ? b : a;
-      };
-      for (const url of urls) {
-        try {
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const data = await res.json();
-          if (Array.isArray(data) && data.length) {
-            // If this is combined file, filter to selected career if present
-            const subset = data.filter((it) => !it.career || it.career === career.toUpperCase());
-            for (const it of subset) {
-              const id = String(it?.id || '');
-              if (!id) continue;
-              const prev = byId.get(id);
-              byId.set(id, pickBetter(prev, it));
-            }
-          }
-        } catch {}
-      }
-      if (!cancelled) setAllItems(Array.from(byId.values()));
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [career]);
+  // No static item preload on Pages; rely on live GraphQL only
 
-  // Load icon fallbacks
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (ICON_FALLBACKS_CACHE) { setIconFallbacks(ICON_FALLBACKS_CACHE); return; }
-      try {
-        const res = await fetch(`${BASE}data/icon_fallbacks.json`);
-        if (!res.ok) return;
-        const data = await res.json();
-        ICON_FALLBACKS_CACHE = data;
-        if (!cancelled) setIconFallbacks(data);
-      } catch {}
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  // No external icon fallbacks; default placeholder icon will be used
 
-  // Load sets index once
-  useEffect(() => {
-    let cancelled = false;
-    async function loadSetsIndex() {
-      try {
-        const res = await fetch(`${BASE}data/sets_index_ALL_SOVEREIGN.json`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setSetsIndex(data);
-      } catch {}
-    }
-    loadSetsIndex();
-    return () => { cancelled = true; };
-  }, []);
+  // No static sets index; use bonuses from equipped item details
 
   // Load saved equipped items when career changes
   useEffect(() => {
@@ -890,19 +827,7 @@ export default function Planner({ variant = 'grid' }) {
           console.debug('[Picker]', pickerSlot, 'raw=', (itemsRawCareer||[]).length, 'final=', items.length, 'slot-mismatch=', mismatchedSlot, 'career-mismatch=', careerMismatches);
         }
         if (!ignore) {
-          if (items && items.length) setPickerItems(items);
-          else {
-            // Fallback to static bundle if live query yields nothing (e.g., CORS blocked)
-            try {
-              const res = await fetch(`${BASE}data/items_ALL_SOVEREIGN.json`);
-              if (res.ok) {
-                const all = await res.json();
-                const slotNorm = (s) => (s || '').trim().toLowerCase();
-                const filtered = (all || []).filter(n => slotNorm((n.slot||'').replace(/_/g,' ')) === target || (String(n.slot||'').toUpperCase() === (isJewelryTarget ? 'JEWELLERY1' : '').toUpperCase()));
-                setPickerItems(filtered);
-              } else setPickerItems([]);
-            } catch { setPickerItems([]); }
-          }
+          setPickerItems(items || []);
         }
       } catch (e) {
         if (!ignore) setPickerError(e);

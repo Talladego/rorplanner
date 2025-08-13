@@ -11,8 +11,7 @@
   "probe:gql": "node scripts/probe-graphql.js",
   "gql:items": "node scripts/search-graphql-items.js",
   "gql:enums": "node scripts/introspect-enums.js",
-  "audit:jewelry": "node scripts/audit-jewelry-locks.js",
-  "pages:data": "node scripts/generate-pages-data.js"
+  "audit:jewelry": "node scripts/audit-jewelry-locks.js"
   
   },
   "dependencies": {

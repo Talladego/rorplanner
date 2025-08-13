@@ -26,9 +26,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate static data for Pages
-        run: npm run pages:data
-
       - name: Build
         run: npm run build
 
