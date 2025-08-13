@@ -255,7 +255,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
     const rarity = String(t.rarity || det.rarity || '').toLowerCase();
     const stats = Array.isArray(det.stats) ? det.stats : [];
     const icon = det.iconUrl || t.iconUrl || (det.iconId ? `https://armory.returnofreckoning.com/item/${det.iconId}` : EMPTY_ICON);
-    const minRank = Number(det.levelRequirement || det.minimumRank || 0) || null;
+  const minRank = Number(det.levelRequirement || det.itemLevel || det.minimumRank || 0) || null;
     return (
       <div className={`tooltip-card ${rarity ? 'rarity-' + rarity : ''}`} role="tooltip">
         <div className="tooltip-header">
@@ -880,16 +880,13 @@ export default function Planner({ variant = 'grid' }) {
           // Fetch talisman items: most have slot 'TALISMAN' or type includes 'TALISMAN'.
           // We'll try by type first, then by slot if available.
           let byId = new Map();
-          const mapCareer = (c) => {
-            const v = String(c || '').trim().toUpperCase();
-            return v === 'BLACKGUARD' ? 'BLACK_GUARD' : v;
-          };
-          try {
-            const byType = await fetchItems({ career: mapCareer(career), perPage: 50, totalLimit: 500, typeEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+            try {
+              // Do NOT pass career for talismans; usableByCareer may exclude them server-side
+              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
             for (const n of (byType || [])) byId.set(String(n.id), n);
           } catch {}
           try {
-            const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
+              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'TALISMAN', allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined });
             for (const n of (bySlot || [])) byId.set(String(n.id), n);
           } catch {}
           // host context for validation
@@ -899,7 +896,7 @@ export default function Planner({ variant = 'grid' }) {
           const existing = Array.isArray(talismans?.[hostName]) ? talismans[hostName] : [];
           const currentAtIdx = existing?.[pickerTalisHost?.index || 0];
           const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
-          let items = Array.from(byId.values())
+      let items = Array.from(byId.values())
             .filter((n) => {
               if (filterStat) {
                 const stats = n?.stats || [];
@@ -913,7 +910,7 @@ export default function Planner({ variant = 'grid' }) {
               if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
               // Minimum Rank (talisman) must equal host item level
               if (hostIlvl) {
-                const tMin = Number(n?.levelRequirement || n?.minimumRank || 0) || 0;
+        const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || 0) || 0;
                 if (!tMin || tMin !== hostIlvl) return false;
               }
               // Exclude duplicates already slotted (allow same id at current index)
@@ -923,8 +920,8 @@ export default function Planner({ variant = 'grid' }) {
               return true;
             })
             .sort((a,b) => {
-              const ilA = Number(a?.itemLevel || 0);
-              const ilB = Number(b?.itemLevel || 0);
+      const ilA = Number(a?.itemLevel || a?.levelRequirement || 0);
+      const ilB = Number(b?.itemLevel || b?.levelRequirement || 0);
               if (ilA !== ilB) return ilB - ilA;
               const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
               const ra = rarOrder.indexOf(String(a?.rarity || '').toUpperCase());
@@ -937,7 +934,7 @@ export default function Planner({ variant = 'grid' }) {
               items = (byName || [])
                 .filter((n) => {
                   if (hostIlvl) {
-                    const tMin = Number(n?.levelRequirement || n?.minimumRank || 0) || 0;
+        const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || 0) || 0;
                     if (!tMin || tMin !== hostIlvl) return false;
                   }
                   const idStr = String(n?.id || '');
@@ -945,7 +942,7 @@ export default function Planner({ variant = 'grid' }) {
                   if (excludeIds.has(idStr)) return false;
                   return true;
                 })
-                .sort((a,b) => (Number(b?.itemLevel||0) - Number(a?.itemLevel||0)));
+        .sort((a,b) => (Number(b?.itemLevel||b?.levelRequirement||0) - Number(a?.itemLevel||a?.levelRequirement||0)));
             } catch {}
           }
           if (!ignore) setPickerItems(items);
