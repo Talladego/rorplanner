@@ -678,28 +678,11 @@ export default function Planner({ variant = 'grid' }) {
             if (target === 'pocket 2') return 'POCKET2';
             return undefined;
           })();
-          // Try a set of slot enum variants to be robust to schema changes
-          const slotVariants = (() => {
-            if (target === 'helm') return ['HELM', 'HEAD'];
-            if (target === 'shoulders') return ['SHOULDER', 'SHOULDERS'];
-            if (target === 'cloak') return ['BACK', 'CLOAK', 'CAPE'];
-            if (target === 'body') return ['BODY', 'CHEST'];
-            if (target === 'gloves') return ['GLOVES', 'HANDS'];
-            if (target === 'belt') return ['BELT', 'WAIST'];
-            if (target === 'boots') return ['BOOTS', 'FEET'];
-            if (target === 'main hand') return ['MAIN_HAND', 'MAINHAND'];
-            if (target === 'off hand') return ['OFF_HAND', 'OFFHAND'];
-            if (target === 'ranged weapon') return ['RANGED_WEAPON', 'RANGED'];
-            if (target === 'event item') return ['EVENT_ITEM', 'EVENTITEM'];
-            if (target === 'pocket 1') return ['POCKET1', 'POCKET_1'];
-            if (target === 'pocket 2') return ['POCKET2', 'POCKET_2'];
-            return [slotEnum].filter(Boolean);
-          })();
+          // Use canonical slot enum only to avoid invalid enum errors
           const byId = new Map();
-          // Primary fetch by slot variants with career filter
           try {
-            const batches = await Promise.all(slotVariants.map(sv => fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: sv })));
-            for (const arr of batches) for (const n of (arr || [])) byId.set(String(n.id), n);
+            const primary = await fetchItems({ career, perPage: 50, totalLimit: 500, slotEq: slotEnum });
+            for (const n of (primary || [])) byId.set(String(n.id), n);
           } catch {}
           // Include 2H for main hand visibility (many planners list 2H in main hand)
           if (target === 'main hand') {
@@ -711,8 +694,8 @@ export default function Planner({ variant = 'grid' }) {
           // Fallback without career filter if results are unexpectedly sparse
           if (byId.size === 0) {
             try {
-              const batchesNoCareer = await Promise.all(slotVariants.map(sv => fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true })));
-              for (const arr of batchesNoCareer) for (const n of (arr || [])) byId.set(String(n.id), n);
+              const noCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: slotEnum, allowAnyName: true });
+              for (const n of (noCareer || [])) byId.set(String(n.id), n);
             } catch {}
           }
           itemsRawCareer = Array.from(byId.values());
@@ -750,7 +733,7 @@ export default function Planner({ variant = 'grid' }) {
               return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
             }
             // For non-jewelry slots, require exact mapping or exact raw enum
-            const allowed = new Set(slotVariants);
+            const allowed = new Set([slotEnum].filter(Boolean));
             if (target === 'main hand') allowed.add('TWO_HAND');
             const rawMatch = allowed.has(raw);
             return acceptable.includes(ns) || rawMatch;
