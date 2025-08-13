@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Set base path for GitHub Pages project site: https://<user>.github.io/rorplanner/
+  // If you publish under a different repo name, update this to '/<repo>/'
+  base: '/rorplanner/',
   plugins: [react()],
   server: {
     proxy: {

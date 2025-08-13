@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404</title>
+    <meta http-equiv="refresh" content="0;url=./index.html" />
+  </head>
+  <body>
+    <script>
+      // SPA redirect for GitHub Pages: send any 404 back to index.html preserving path in hash
+      (function(){
+        var l = window.location;
+        var repoBase = '/rorplanner/'; // keep in sync with vite.config.js base
+        if (l.pathname.indexOf(repoBase) === 0) {
+          var path = l.pathname.substring(repoBase.length);
+          var search = l.search || '';
+          var hash = l.hash || '';
+          var newUrl = repoBase + 'index.html#/' + path + (search ? search : '') + (hash ? hash : '');
+          window.location.replace(newUrl);
+        } else {
+          window.location.replace('./index.html');
+        }
+      })();
+    </script>
+  </body>
+</html>

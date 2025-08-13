@@ -1,4 +1,9 @@
-const GQL_ENDPOINT = '/graphql';
+// On GitHub Pages, you cannot proxy /graphql. This app expects the API to be available
+// via the same origin under BASE + 'graphql' during local dev. For production on Pages,
+// either pre-bundle data under public/data and avoid live calls, or point to a CORS-enabled
+// absolute endpoint here.
+const BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/';
+const GQL_ENDPOINT = `${BASE}graphql`;
 
 async function post(query, variables) {
   const res = await fetch(GQL_ENDPOINT, {

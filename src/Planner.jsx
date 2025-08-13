@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchSovereignItems, fetchItemDetails } from './gqlClient';
 import './Planner.css';
-import { CAREERS, DEFAULT_CAREER, getCareerDataPaths } from './config';
+import { CAREERS, DEFAULT_CAREER, getCareerDataPaths, BASE } from './config';
 
 const slots = [
   { name: "Event Item", gridArea: "event" },
@@ -437,7 +437,7 @@ export default function Planner({ variant = 'grid' }) {
     async function load() {
       if (ICON_FALLBACKS_CACHE) { setIconFallbacks(ICON_FALLBACKS_CACHE); return; }
       try {
-        const res = await fetch('/data/icon_fallbacks.json');
+        const res = await fetch(`${BASE}data/icon_fallbacks.json`);
         if (!res.ok) return;
         const data = await res.json();
         ICON_FALLBACKS_CACHE = data;
@@ -453,7 +453,7 @@ export default function Planner({ variant = 'grid' }) {
     let cancelled = false;
     async function loadSetsIndex() {
       try {
-        const res = await fetch('/data/sets_index_ALL_SOVEREIGN.json');
+        const res = await fetch(`${BASE}data/sets_index_ALL_SOVEREIGN.json`);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setSetsIndex(data);
@@ -681,6 +681,9 @@ export default function Planner({ variant = 'grid' }) {
     let ignore = false;
     async function loadFromGraphQL() {
       if (!pickerOpen || !pickerSlot) return;
+  // Disable live GraphQL on GitHub Pages (static hosting, no proxy/CORS)
+  const disableGql = (typeof window !== 'undefined') && /github\.io$/i.test(window.location.hostname);
+  if (disableGql) return; // rely on local filteredItems fallback
       setPickerLoading(true);
       setPickerError(null);
     setPickerItems([]);
