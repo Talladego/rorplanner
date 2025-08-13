@@ -13,11 +13,13 @@ async function post(query, variables) {
     },
     body: JSON.stringify({ query, variables })
   });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || json.errors) {
-  const msg = (json.errors && json.errors[0] && (json.errors[0].message || json.errors[0].extensions?.message)) || `HTTP ${res.status}`;
-  const err = new Error(msg);
-  err.response = json;
+  let json = {};
+  try { json = await res.json(); } catch {}
+  if (!res.ok || (json && json.errors)) {
+    const firstErr = json?.errors?.[0];
+    const msg = (firstErr && (firstErr.message || firstErr.extensions?.message)) || `HTTP ${res.status}`;
+    const err = new Error(msg);
+    err.response = json;
     throw err;
   }
   return json.data;
@@ -45,8 +47,10 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   const usable = undefined;
   const out = [];
   let after = undefined;
+  const MAX_FIRST = 50;
+  const pageSize = Math.max(1, Math.min(Number(perPage) || 50, MAX_FIRST));
   do {
-    const data = await post(q, { first: perPage, after, where, usableByCareer: usable });
+    const data = await post(q, { first: pageSize, after, where, usableByCareer: usable });
     const conn = data?.items;
     const edges = conn?.edges || [];
     for (const e of edges) out.push(e.node);
