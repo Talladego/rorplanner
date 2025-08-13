@@ -783,7 +783,7 @@ export default function Planner({ variant = 'grid' }) {
         const idx = pickerTalisHost.index;
         // Enforce talisman Minimum Rank equals host item level
         const hostItem = equipped[host];
-        const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+  const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
         const tMinRank = Number(detail?.levelRequirement || detail?.minimumRank || item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
         if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
@@ -803,7 +803,7 @@ export default function Planner({ variant = 'grid' }) {
         const host = pickerTalisHost.slotName;
         const idx = pickerTalisHost.index;
         const hostItem = equipped[host];
-        const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+  const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
         const tMinRank = Number(item?.details?.levelRequirement || item?.levelRequirement || 0) || 0;
         if (hostIlvl && tMinRank && hostIlvl !== tMinRank) { setPickerOpen(false); setPickerIsTalis(false); return; }
         // Enforce no duplicate identical talisman on the same host
@@ -894,7 +894,7 @@ export default function Planner({ variant = 'grid' }) {
           // host context for validation
           const hostName = pickerTalisHost?.slotName || '';
           const hostItem = equipped[hostName];
-          const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.itemLevel || 0) || 0;
+          const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
           const existing = Array.isArray(talismans?.[hostName]) ? talismans[hostName] : [];
           const currentAtIdx = existing?.[pickerTalisHost?.index || 0];
           const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
@@ -912,7 +912,7 @@ export default function Planner({ variant = 'grid' }) {
               if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
               // Minimum Rank (talisman) must equal host item level
               if (hostIlvl) {
-        const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || 0) || 0;
+                const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
                 if (!tMin || tMin !== hostIlvl) return false;
               }
               // Exclude duplicates already slotted (allow same id at current index)
@@ -936,7 +936,7 @@ export default function Planner({ variant = 'grid' }) {
               items = (byName || [])
                 .filter((n) => {
                   if (hostIlvl) {
-        const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || 0) || 0;
+                    const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
                     if (!tMin || tMin !== hostIlvl) return false;
                   }
                   const idStr = String(n?.id || '');
