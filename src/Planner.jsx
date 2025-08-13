@@ -889,12 +889,17 @@ export default function Planner({ variant = 'grid' }) {
           let byId = new Map();
             try {
               // Talismans are type ENHANCEMENT in the API
-              const byType = await fetchItems({ perPage: 50, totalLimit: 500, typeEq: 'ENHANCEMENT' });
+              const byType = await fetchItems({ perPage: 50, totalLimit: 2000, typeEq: 'ENHANCEMENT' });
             for (const n of (byType || [])) byId.set(String(n.id), n);
           } catch {}
+            try {
+              // Some datasets might still expose talismans under TALISMAN type; merge if any
+              const byTypeLegacy = await fetchItems({ perPage: 50, totalLimit: 2000, typeEq: 'TALISMAN' });
+              for (const n of (byTypeLegacy || [])) byId.set(String(n.id), n);
+            } catch {}
           try {
               // Many show slot NONE; merge those too
-              const bySlot = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: 'NONE' });
+              const bySlot = await fetchItems({ perPage: 50, totalLimit: 2000, slotEq: 'NONE' });
             for (const n of (bySlot || [])) byId.set(String(n.id), n);
           } catch {}
           // host context for validation
@@ -928,7 +933,7 @@ export default function Planner({ variant = 'grid' }) {
             });
           if (items.length === 0) {
             try {
-              const byName = await fetchItems({ perPage: 50, totalLimit: 200, allowAnyName: false, nameContains: 'talisman' });
+              const byName = await fetchItems({ perPage: 50, totalLimit: 1000, allowAnyName: false, nameContains: 'talisman' });
               items = (byName || [])
                 .filter((n) => {
                   if (hostIlvl) {
@@ -940,7 +945,7 @@ export default function Planner({ variant = 'grid' }) {
                   if (excludeIds.has(idStr)) return false;
                   return true;
                 })
-        .sort((a,b) => (Number(b?.itemLevel||b?.levelRequirement||0) - Number(a?.itemLevel||a?.levelRequirement||0)));
+                .sort((a,b) => (Number(b?.itemLevel||b?.levelRequirement||0) - Number(a?.itemLevel||a?.levelRequirement||0)));
             } catch {}
           }
           if (!ignore) setPickerItems(items);
