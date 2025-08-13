@@ -890,8 +890,13 @@ export default function Planner({ variant = 'grid' }) {
             try {
               // Talismans are type ENHANCEMENT in the API
               const byType = await fetchItems({ perPage: 50, totalLimit: 2000, typeEq: 'ENHANCEMENT' });
-            for (const n of (byType || [])) byId.set(String(n.id), n);
-          } catch {}
+              for (const n of (byType || [])) byId.set(String(n.id), n);
+            } catch {}
+            try {
+              // Some sources may use ENCHANTMENT; include as well
+              const byTypeAlt = await fetchItems({ perPage: 50, totalLimit: 2000, typeEq: 'ENCHANTMENT' });
+              for (const n of (byTypeAlt || [])) byId.set(String(n.id), n);
+            } catch {}
             try {
               // Some datasets might still expose talismans under TALISMAN type; merge if any
               const byTypeLegacy = await fetchItems({ perPage: 50, totalLimit: 2000, typeEq: 'TALISMAN' });
@@ -911,11 +916,6 @@ export default function Planner({ variant = 'grid' }) {
           const excludeIds = new Set(existing.map((t, j) => (t && j !== (pickerTalisHost?.index || 0)) ? String(t.id) : null).filter(Boolean));
           let items = Array.from(byId.values())
             .filter((n) => {
-              // Minimum Rank (talisman) must equal host item level
-              if (hostIlvl) {
-                const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
-                if (!tMin || tMin !== hostIlvl) return false;
-              }
               // Exclude duplicates already slotted (allow same id at current index)
               const idStr = String(n?.id || '');
               if (!idStr) return false;
@@ -936,10 +936,6 @@ export default function Planner({ variant = 'grid' }) {
               const byName = await fetchItems({ perPage: 50, totalLimit: 1000, allowAnyName: false, nameContains: 'talisman' });
               items = (byName || [])
                 .filter((n) => {
-                  if (hostIlvl) {
-                    const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
-                    if (!tMin || tMin !== hostIlvl) return false;
-                  }
                   const idStr = String(n?.id || '');
                   if (!idStr) return false;
                   if (excludeIds.has(idStr)) return false;
