@@ -820,20 +820,30 @@ export default function Planner({ variant = 'grid' }) {
   const [cachedTotal, setCachedTotal] = useState(0);
   const recalcCacheCount = () => {
     try {
-      let count = 0;
+      const ids = new Set();
       try {
         for (const v of itemPickerCacheRef.current.values()) {
           const arr = Array.isArray(v?.base) ? v.base : (Array.isArray(v?.items) ? v.items : null);
-          if (Array.isArray(arr)) count += arr.length;
+          if (Array.isArray(arr)) {
+            for (const n of arr) {
+              const id = String(n?.id || '');
+              if (id) ids.add(id);
+            }
+          }
         }
       } catch {}
       try {
         for (const v of talisPickerCacheRef.current.values()) {
           const arr = Array.isArray(v?.base) ? v.base : null;
-          if (Array.isArray(arr)) count += arr.length;
+          if (Array.isArray(arr)) {
+            for (const n of arr) {
+              const id = String(n?.id || '');
+              if (id) ids.add(id);
+            }
+          }
         }
       } catch {}
-      setCachedTotal(count);
+      setCachedTotal(ids.size);
     } catch {}
   };
   const setItemCache = (key, value) => { try { itemPickerCacheRef.current.set(key, value); } catch {} recalcCacheCount(); };
