@@ -816,6 +816,28 @@ export default function Planner({ variant = 'grid' }) {
   // Caches to avoid refetching when slot + filters + context unchanged
   const itemPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
   const talisPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
+  // Cached totals for status indicator
+  const [cachedTotal, setCachedTotal] = useState(0);
+  const recalcCacheCount = () => {
+    try {
+      let count = 0;
+      try {
+        for (const v of itemPickerCacheRef.current.values()) {
+          const arr = Array.isArray(v?.base) ? v.base : (Array.isArray(v?.items) ? v.items : null);
+          if (Array.isArray(arr)) count += arr.length;
+        }
+      } catch {}
+      try {
+        for (const v of talisPickerCacheRef.current.values()) {
+          const arr = Array.isArray(v?.base) ? v.base : null;
+          if (Array.isArray(arr)) count += arr.length;
+        }
+      } catch {}
+      setCachedTotal(count);
+    } catch {}
+  };
+  const setItemCache = (key, value) => { try { itemPickerCacheRef.current.set(key, value); } catch {} recalcCacheCount(); };
+  const setTalisCache = (key, value) => { try { talisPickerCacheRef.current.set(key, value); } catch {} recalcCacheCount(); };
   // Precache activity indicator
   const [isPrecaching, setIsPrecaching] = useState(false);
   const precacheOpsRef = useRef(0);
@@ -1068,7 +1090,7 @@ export default function Planner({ variant = 'grid' }) {
               const rb = rarOrder.indexOf(String(b?.rarity || '').toUpperCase());
               return rb - ra;
             });
-          if (!cancelled) itemPickerCacheRef.current.set(itemBaseKey, { base, ts: Date.now() });
+          if (!cancelled) setItemCache(itemBaseKey, { base, ts: Date.now() });
         };
     // Process item warm-ups with tuned concurrency to finish fast without saturating
   const runQueue = async (tasks, limit = PRECACHE_ITEMS_CONC) => {
@@ -1112,7 +1134,7 @@ export default function Planner({ variant = 'grid' }) {
             const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
             return rb - ra;
           });
-          if (!cancelled) talisPickerCacheRef.current.set(talisBaseKey, { base, ts: Date.now() });
+          if (!cancelled) setTalisCache(talisBaseKey, { base, ts: Date.now() });
         };
   const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
   await runQueue(itemTasks, PRECACHE_ITEMS_CONC);
@@ -1628,10 +1650,10 @@ export default function Planner({ variant = 'grid' }) {
             setPickerDebug(dbg);
             // Store bases for reuse: common 'all' key and, if rarity filter was used, a rarity-specific key
             try {
-              talisPickerCacheRef.current.set(keyAll, { base: baseAll, ts: Date.now() });
+              setTalisCache(keyAll, { base: baseAll, ts: Date.now() });
               if (rarityKey) {
                 const baseRar = baseAll.filter(n => String(n?.rarity || n?.details?.rarity || '').toUpperCase() === rarityKey.toUpperCase());
-                talisPickerCacheRef.current.set(keyExact, { base: baseRar, ts: Date.now() });
+                setTalisCache(keyExact, { base: baseRar, ts: Date.now() });
               }
             } catch {}
           }
@@ -2002,7 +2024,7 @@ export default function Planner({ variant = 'grid' }) {
           setPickerDebug(dbg);
           // Store pre-uniqueness base list keyed by context; on reuse we reapply unique filtering
           const baseToStore = itemsPreUnique || items || [];
-          itemPickerCacheRef.current.set(itemBaseKey, { base: baseToStore, ts: Date.now() });
+          setItemCache(itemBaseKey, { base: baseToStore, ts: Date.now() });
         }
       } catch (e) {
   if (!ignore) setPickerError(e);
@@ -2660,7 +2682,7 @@ export default function Planner({ variant = 'grid' }) {
         <div className="ror-status">
           <div className="status-left prefetch" title={isPrecaching ? 'Loading data...' : 'Data loaded.'}>
             <span className={`dot${isPrecaching ? ' busy' : ''}`} />
-            <span>{isPrecaching ? 'Loading data...' : 'Data loaded.'}</span>
+            <span>{isPrecaching ? 'Loading data...' : 'Data loaded.'} ({cachedTotal})</span>
           </div>
           <div className="status-right">
             <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
