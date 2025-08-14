@@ -784,7 +784,6 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
 export default function Planner({ variant = 'grid' }) {
   // App version/build for status row in RoR view
   const appVersion = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_VERSION) ? import.meta.env.VITE_APP_VERSION : (pkg?.version || '0.0.0');
-  const buildTime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_TIME) ? import.meta.env.VITE_BUILD_TIME : '';
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
   const [pickerIsTalis, setPickerIsTalis] = useState(false);
@@ -2641,15 +2640,12 @@ export default function Planner({ variant = 'grid' }) {
         </div>
         {/* Status row at bottom of container */}
         <div className="ror-status">
-          <div className="status-left">
-            <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
-            {buildTime ? (
-              <span className="build" title={`Built at ${buildTime}`}>• built {new Date(buildTime).toLocaleString()}</span>
-            ) : null}
-          </div>
-          <div className="status-right prefetch" title={isPrecaching ? 'Precaching data…' : 'Idle'}>
+          <div className="status-left prefetch" title={isPrecaching ? 'Loading data...' : 'Data loaded.'}>
             <span className={`dot${isPrecaching ? ' busy' : ''}`} />
-            <span>{isPrecaching ? 'Precaching…' : 'Idle'}</span>
+            <span>{isPrecaching ? 'Loading data...' : 'Data loaded.'}</span>
+          </div>
+          <div className="status-right">
+            <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
           </div>
         </div>
   <ItemPicker
