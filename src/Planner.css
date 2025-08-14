@@ -374,7 +374,8 @@
 .stats-lines .stats-line:nth-child(even) { background: rgba(0,0,0,0.08); border-radius: 4px; padding: 3px 6px; }
 
 /* Talisman mini-slots anchored to gear bottom-right, below label */
-.talis-row {
+/* Grid layout: anchor mini talismans below the gear label */
+.planner-grid .talis-row {
   position: absolute;
   bottom: -24px; /* place below the gear label */
   right: 0;
