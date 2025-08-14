@@ -1041,7 +1041,7 @@ export default function Planner({ variant = 'grid' }) {
     return 12; // default: talismans within 12 CR below current CR
   })();
 
-  // Precaching: warm item/talis base caches for all slots for current Career/CR/RR in default mode
+  // Precaching: warm global item bases per rarity (career-scoped) and talisman bases per rarity
   useEffect(() => {
   let cancelled = false;
   // Avoid precaching while a picker is open to reduce contention
@@ -1051,174 +1051,56 @@ export default function Planner({ variant = 'grid' }) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const run = async () => {
       try {
-  // Mark precache activity starting (for initial items warm-up). Follow-up batches increment separately.
+  // Mark precache activity starting
   incPrecache();
     // Warm GraphQL career enums to avoid early round-trips during mapping
     try { warmCareerEnums(); } catch {}
-        const normalize = (s) => (s || '').trim().toLowerCase().replaceAll('jewellry', 'jewelry');
-        const jewelrySlots = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'];
-        const mapExact = new Map([
-          ['main hand', ['main hand', 'right hand', 'mainhand']],
-          ['off hand', ['off hand', 'left hand', 'offhand']],
-          ['ranged weapon', ['ranged', 'ranged weapon']],
-          ['event item', ['event', 'event item']],
-          ['pocket 1', ['pocket 1','pocket1']],
-          ['pocket 2', ['pocket 2','pocket2']],
-          ['helm', ['helm']],
-          ['shoulders', ['shoulder']],
-          ['cloak', ['back']],
-          ['body', ['body']],
-          ['gloves', ['gloves']],
-          ['belt', ['belt']],
-          ['boots', ['boots']],
-          ['jewelry slot 1', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
-          ['jewelry slot 2', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
-          ['jewelry slot 3', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
-          ['jewelry slot 4', ['jewelry', 'jewelery', 'jewellery', 'jewel', 'accessory', 'accessories', 'ring', 'neck', 'necklace', 'amulet', 'talisman', 'trinket', 'pendant', 'charm', ...jewelrySlots]],
-        ]);
-        const friendlySlot = (raw) => {
-          const u = String(raw || '').toUpperCase();
-          if (/^JEWELLERY([1-4])$/.test(u)) return `jewelry slot ${u.slice(-1)}`;
-          if (u === 'HELM') return 'helm';
-          if (u === 'SHOULDER') return 'shoulders';
-          if (u === 'BACK') return 'cloak';
-          if (u === 'BODY') return 'body';
-          if (u === 'GLOVES') return 'gloves';
-          if (u === 'BELT') return 'belt';
-          if (u === 'BOOTS') return 'boots';
-          if (u === 'POCKET1') return 'pocket 1';
-          if (u === 'POCKET2') return 'pocket 2';
-          if (u === 'EVENT') return 'event item';
-          return u.replace(/_/g, ' ').toLowerCase();
-        };
-        const slotVariantsFor = (target) => {
-          if (target === 'helm') return ['HELM'];
-          if (target === 'shoulders') return ['SHOULDER'];
-          if (target === 'cloak') return ['BACK'];
-          if (target === 'body') return ['BODY'];
-          if (target === 'gloves') return ['GLOVES'];
-          if (target === 'belt') return ['BELT'];
-          if (target === 'boots') return ['BOOTS'];
-          if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
-          if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
-          if (target === 'ranged weapon') return ['RANGED_WEAPON'];
-          if (target === 'event item') return ['EVENT'];
-          if (target === 'pocket 1') return ['POCKET1','POCKET2'];
-          if (target === 'pocket 2') return ['POCKET1','POCKET2'];
-          return [];
-        };
-        const armorSlots = new Set(['helm','shoulders','body','gloves','boots']);
         const defaultOrder = [ { itemLevel: 'DESC' }, { rarity: 'DESC' } ];
-        const slotsToPrecache = slots.map(s => s.name);
         const careerEnum = await mapCareerEnumDynamic(career);
-        const warmSlot = async (slotName, setOnlyFlag) => {
-          const target = normalize(slotName);
-          const isJewelryTarget = jewelrySlots.includes(target);
-          const itemBaseKey = JSON.stringify({
-            picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank,
-            name: '', stat: '', rarity: '', setOnly: !!setOnlyFlag, defaultMode: true
-          });
-          if (itemPickerCacheRef.current.has(itemBaseKey)) return;
+        // Helpers to filter out vanity and non-stat items
+        const hasStats = (it) => {
+          const armor = typeof it?.armor === 'number' ? it.armor : (typeof it?.details?.armor === 'number' ? it.details.armor : null);
+          const dps = typeof it?.dps === 'number' ? it.dps : (typeof it?.details?.dps === 'number' ? it.details.dps : null);
+          const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+          return (typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0);
+        };
+        const isVanity = (it) => {
+          const typeUp = String(it?.type || it?.details?.type || '').toUpperCase();
+          const slotRaw = String(it?.slotRaw || it?.slot || '').toUpperCase();
+          if (slotRaw.startsWith('TROPHY')) return true;
+          return typeUp === 'NONE' || slotRaw === 'NONE';
+        };
+        // Global per-rarity warm-up (career-scoped, CR/RR banded)
+        const warmItemsByRarity = async (rarityVal) => {
+          const key = JSON.stringify({ picker: 'item-global', rarity: String(rarityVal || ''), career, careerRank, renownRank, defaultMode: true });
+          if (itemPickerCacheRef.current.has(key)) return;
           const byId = new Map();
-          if (isJewelryTarget) {
-            const slotsToTry = ['JEWELLERY1','JEWELLERY2','JEWELLERY3','JEWELLERY4'];
-            // Keep warm-up lightweight: only fetch career-scoped here; picker can add no-career merge if needed
-            for (const sv of slotsToTry) {
-              if (cancelled) return;
-              try {
-                const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
-                for (const it of (arr || [])) byId.set(String(it.id), it);
-              } catch {}
-              // Yield to UI/network
-              await sleep(0);
-            }
-          } else {
-            const variants = slotVariantsFor(target);
-            for (const sv of variants) {
-              try {
-                const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
-                for (const it of (arr || [])) byId.set(String(it.id), it);
-              } catch {}
-              if (cancelled) return;
-              await sleep(0);
-            }
-            // Default-mode booster similar to picker
-            if (armorSlots.has(target)) {
-              const wanted = ['Sovereign','Warlord','Invader','Vanquisher','Triumphant','Victorious'];
-              for (const sv of variants) {
-                for (const rar of ['VERY_RARE','MYTHIC']) {
-                  try {
-                    const arrTop = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true, rarityEq: rar });
-                    for (const n of (arrTop || [])) {
-                      const setName = n?.itemSet?.name || n?.details?.set?.name || '';
-                      if (setName && wanted.some(w => setName.toLowerCase().includes(w.toLowerCase()))) byId.set(String(n.id), n);
-                    }
-                  } catch {}
-                  if (cancelled) return;
-                  await sleep(0);
-                }
-              }
-            }
-            // If user wants Set items only, proactively merge a no-career pass
-            if (setOnlyFlag) {
-              for (const sv of variants) {
-                try {
-                  const arrNoCareer = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: true, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
-                  for (const n of (arrNoCareer || [])) byId.set(String(n.id), n);
-                } catch {}
-                if (cancelled) return;
-                await sleep(0);
-              }
-            }
-          }
-          const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
-          const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
-          const itemsPre = Array.from(byId.values())
-            .map(n => ({ ...n, slotRaw: n.slot, slot: friendlySlot(n.slot) }));
-          const base = itemsPre
+          try {
+            const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 2000, allowAnyName: true, rarityEq: rarityVal, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
+            for (const it of (arr || [])) byId.set(String(it.id), it);
+          } catch {}
+          // Build base: stats-only, non-vanity, within CR/RR band
+          const base = Array.from(byId.values())
+            .filter((n) => hasStats(n) && !isVanity(n))
             .filter((n) => {
-              const ns = normalize(String(n.slot || ''));
-              const raw = String(n.slotRaw || '').toUpperCase();
-              if (isJewelryTarget && targetJewNum >= 1 && targetJewNum <= 4) {
-                return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
-              }
-              const allowed = new Set(slotVariantsFor(target));
-              if (target === 'main hand') allowed.add('TWO_HAND');
-              const rawMatch = allowed.has(raw);
-              return acceptable.includes(ns) || rawMatch;
-            })
-            .filter((n) => {
-              const reqLvlNum = Number(n?.levelRequirement || 0);
-              const reqRRNum = Number(n?.renownRankRequirement || 0);
-              // Prefer items close to current CR and not far below RR
+              const reqLvlNum = Number(n?.levelRequirement || n?.details?.levelRequirement || 0);
+              const reqRRNum = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || 0);
               const withinLvl = !reqLvlNum || (careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= PRECACHE_CR_BAND;
               const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
               return withinLvl && withinRR;
             })
             .sort((a,b) => {
-              const ilA = Number(a?.itemLevel || 0);
-              const ilB = Number(b?.itemLevel || 0);
+              const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
+              const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
               if (ilA !== ilB) return ilB - ilA;
               const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
-              const ra = rarOrder.indexOf(String(a?.rarity || '').toUpperCase());
-              const rb = rarOrder.indexOf(String(b?.rarity || '').toUpperCase());
+              const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+              const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
               return rb - ra;
             });
-          if (!cancelled) {
-            setItemCache(itemBaseKey, { base, ts: Date.now() });
-            // Also populate per-rarity keys so they can be warmed independently when using per-rarity prefetchers
-            try {
-              for (const rar of RARITIES) {
-                const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: !!setOnlyFlag, defaultMode: true });
-                if (!itemPickerCacheRef.current.has(key)) {
-                  const baseR = base.filter(n => String(n?.rarity || n?.details?.rarity || '').toUpperCase() === rar);
-                  setItemCache(key, { base: baseR, ts: Date.now() });
-                }
-              }
-            } catch {}
-          }
+          if (!cancelled) setItemCache(key, { base, ts: Date.now() });
         };
-    // Process item warm-ups with tuned concurrency to finish fast without saturating
+    // Process warm-ups with tuned concurrency (one worker per rarity bucket)
   const runQueue = async (tasks, limit = PRECACHE_ITEMS_CONC) => {
           let i = 0;
           const workers = new Array(Math.max(1, limit)).fill(0).map(async () => {
@@ -1230,7 +1112,7 @@ export default function Planner({ variant = 'grid' }) {
           });
           await Promise.all(workers);
         };
-        // Warm a talisman base list for given UI filters (only rarity subset supported to keep it light)
+        // Warm a talisman base list for given rarity (stats-only)
         const warmTalisBase = async (rarityVal = '') => {
           // Cache talisman bases by rarity only; UI filters will be applied at recomposition time
           const talisBaseKey = JSON.stringify({ picker: 'talis-base', rarity: String(rarityVal || '') });
@@ -1262,46 +1144,17 @@ export default function Planner({ variant = 'grid' }) {
           });
           if (!cancelled) setTalisCache(talisBaseKey, { base, ts: Date.now() });
         };
-  // Warm per slot and per rarity (including "all" via warmSlot)
-  const itemTasks = [
-    ...slotsToPrecache.map((slotName) => () => warmSlot(slotName, false)),
-    ...slotsToPrecache.flatMap((slotName) => RARITIES.map(rar => async () => {
-      // Build a cache key matching picker rarity filter; if not present, derive from slot base
-      const target = (slotName || '').trim().toLowerCase();
-      const isJewelryTarget = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'].includes(target);
-      const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: false, defaultMode: true });
-      if (!itemPickerCacheRef.current.has(key)) {
-        // Ensure base exists first
-        await warmSlot(slotName, false);
-      }
-    }))
-  ];
-  await runQueue(itemTasks, itemTasks.length);
-  // Initial batch done
-  decPrecache();
-        // Kick off setOnly=true warming shortly after, but don't block
+        // Warm item global bases per rarity
+        const itemTasks = RARITIES.map((r) => () => warmItemsByRarity(r));
+        await runQueue(itemTasks, Math.min(RARITIES.length, PRECACHE_ITEMS_CONC));
+        // Initial batch done
+        decPrecache();
+        // Warm talisman bases per rarity shortly after
         setTimeout(() => {
           if (cancelled) return;
-  incPrecache();
-      const moreTasks = [
-        ...slotsToPrecache.map((slotName) => () => warmSlot(slotName, true)),
-        ...slotsToPrecache.flatMap((slotName) => RARITIES.map(rar => async () => {
-          const target = (slotName || '').trim().toLowerCase();
-          const isJewelryTarget = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'].includes(target);
-          const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: true, defaultMode: true });
-          if (!itemPickerCacheRef.current.has(key)) {
-            await warmSlot(slotName, true);
-          }
-        }))
-      ];
-    runQueue(moreTasks, moreTasks.length).catch(() => {}).finally(() => { decPrecache(); });
-        }, 800);
-        // Warm talisman bases shortly after: default (all) and MYTHIC rarity
-        setTimeout(() => {
-          if (cancelled) return;
-    incPrecache();
-  const talisTasks = ['' , ...RARITIES].map(r => () => warmTalisBase(r));
-    runQueue(talisTasks, PRECACHE_TALIS_CONC).catch(() => {}).finally(() => { decPrecache(); });
+          incPrecache();
+          const talisTasks = RARITIES.map(r => () => warmTalisBase(r));
+          runQueue(talisTasks, Math.min(RARITIES.length, PRECACHE_TALIS_CONC)).catch(() => {}).finally(() => { decPrecache(); });
         }, 200);
       } catch {}
     };
@@ -1835,7 +1688,7 @@ export default function Planner({ variant = 'grid' }) {
           name: filterName || '', stat: filterStat || '', rarity: filterRarity || '',
           setOnly: !!filterSetOnly, defaultMode: !!defaultMode
         });
-        const itemBaseHit = itemPickerCacheRef.current.get(itemBaseKey);
+  const itemBaseHit = itemPickerCacheRef.current.get(itemBaseKey);
         if (itemBaseHit && Array.isArray(itemBaseHit.base)) {
           // Reapply unique-equips filtering against current equipped and client-only toggles (careerLockedOnly)
           const base = itemBaseHit.base;
@@ -1855,6 +1708,69 @@ export default function Planner({ variant = 'grid' }) {
             setPickerLoading(false);
           }
           return;
+        }
+        // Try deriving from global per-rarity caches (career-scoped) before fetching
+        const raritiesWanted = filterRarity ? [String(filterRarity).toUpperCase()] : RARITIES.slice();
+        const globalBases = [];
+        for (const rar of raritiesWanted) {
+          const gkey = JSON.stringify({ picker: 'item-global', rarity: String(rar || ''), career, careerRank, renownRank, defaultMode: true });
+          const hit = itemPickerCacheRef.current.get(gkey);
+          if (hit && Array.isArray(hit.base)) globalBases.push(hit.base);
+        }
+        if (globalBases.length) {
+          const merged = [].concat(...globalBases);
+          const byId = new Map();
+          for (const n of merged) byId.set(String(n.id), n);
+          const itemsPre = Array.from(byId.values())
+            .map((n) => ({ ...n, slotRaw: n.slot, slot: friendlySlot(n.slot) }));
+          const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
+          let items = itemsPre
+            .filter((n) => {
+              const ns = normalize(String(n.slot || ''));
+              const raw = String(n.slotRaw || '').toUpperCase();
+              if (isJewelryTarget && targetJewNum >= 1 && targetJewNum <= 4) {
+                return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
+              }
+              const allowed = new Set(slotVariants);
+              if (target === 'main hand') allowed.add('TWO_HAND');
+              const rawMatch = allowed.has(raw);
+              return acceptable.includes(ns) || rawMatch;
+            })
+            .filter((n) => {
+              // Name/stat/rarity UI filters
+              if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
+              if (filterStat) {
+                const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
+                const has = stats.some(s => String(s?.stat || s?.name || s?.type || '').toLowerCase().includes(String(filterStat).toLowerCase()));
+                if (!has) return false;
+              }
+              if (filterRarity) {
+                const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
+                if (r !== String(filterRarity).toUpperCase()) return false;
+              }
+              return true;
+            })
+            .sort((a,b) => {
+              const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
+              const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
+              if (ilA !== ilB) return ilB - ilA;
+              const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+              const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+              const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
+              return (rb - ra);
+            });
+          const equippedEntries = Object.entries(equipped || {});
+          const uniqueIsEquippedElsewhere = (id) => equippedEntries.some(([slotName, it]) => it && String(it.id) === String(id) && slotName !== pickerSlot);
+          const itemsPreUnique = items.slice();
+          items = items.filter((n) => !(n?.uniqueEquipped && uniqueIsEquippedElsewhere(n.id)));
+          if (!ignore && items.length) {
+            setPickerItems(items);
+            setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'item-global-cache-derived'], final: { finalCount: items.length } });
+            setPickerLoading(false);
+            // Store a slot-specific base for quicker reuse next time
+            setItemCache(itemBaseKey, { base: itemsPreUnique, ts: Date.now() });
+            return;
+          }
         }
         // Start loading only if not served from cache
         setPickerLoading(true);
