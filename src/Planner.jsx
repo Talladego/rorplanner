@@ -42,6 +42,9 @@ const magicOrder = [
   'Healing Critical Bonus','Healing Power'
 ];
 
+// Rarity buckets used across warmers and sorting
+const RARITIES = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+
 // Revert to per-slot filtering only; no career/type weapon logic for now.
 
 function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = [], magicList = [], primaryContrib = {}, defContrib = {}, offContrib = {}, magContrib = {}, sourceMeta = {} }) {
@@ -1201,7 +1204,19 @@ export default function Planner({ variant = 'grid' }) {
               const rb = rarOrder.indexOf(String(b?.rarity || '').toUpperCase());
               return rb - ra;
             });
-          if (!cancelled) setItemCache(itemBaseKey, { base, ts: Date.now() });
+          if (!cancelled) {
+            setItemCache(itemBaseKey, { base, ts: Date.now() });
+            // Also populate per-rarity keys so they can be warmed independently when using per-rarity prefetchers
+            try {
+              for (const rar of RARITIES) {
+                const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: !!setOnlyFlag, defaultMode: true });
+                if (!itemPickerCacheRef.current.has(key)) {
+                  const baseR = base.filter(n => String(n?.rarity || n?.details?.rarity || '').toUpperCase() === rar);
+                  setItemCache(key, { base: baseR, ts: Date.now() });
+                }
+              }
+            } catch {}
+          }
         };
     // Process item warm-ups with tuned concurrency to finish fast without saturating
   const runQueue = async (tasks, limit = PRECACHE_ITEMS_CONC) => {
@@ -1247,7 +1262,20 @@ export default function Planner({ variant = 'grid' }) {
           });
           if (!cancelled) setTalisCache(talisBaseKey, { base, ts: Date.now() });
         };
-  const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
+  // Warm per slot and per rarity (including "all" via warmSlot)
+  const itemTasks = [
+    ...slotsToPrecache.map((slotName) => () => warmSlot(slotName, false)),
+    ...slotsToPrecache.flatMap((slotName) => RARITIES.map(rar => async () => {
+      // Build a cache key matching picker rarity filter; if not present, derive from slot base
+      const target = (slotName || '').trim().toLowerCase();
+      const isJewelryTarget = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'].includes(target);
+      const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: false, defaultMode: true });
+      if (!itemPickerCacheRef.current.has(key)) {
+        // Ensure base exists first
+        await warmSlot(slotName, false);
+      }
+    }))
+  ];
   await runQueue(itemTasks, itemTasks.length);
   // Initial batch done
   decPrecache();
@@ -1255,14 +1283,24 @@ export default function Planner({ variant = 'grid' }) {
         setTimeout(() => {
           if (cancelled) return;
   incPrecache();
-      const moreTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, true));
+      const moreTasks = [
+        ...slotsToPrecache.map((slotName) => () => warmSlot(slotName, true)),
+        ...slotsToPrecache.flatMap((slotName) => RARITIES.map(rar => async () => {
+          const target = (slotName || '').trim().toLowerCase();
+          const isJewelryTarget = ['jewelry slot 1','jewelry slot 2','jewelry slot 3','jewelry slot 4'].includes(target);
+          const key = JSON.stringify({ picker: 'item-base', slot: slotName, target, isJewelryTarget, career, careerRank, renownRank, name: '', stat: '', rarity: rar, setOnly: true, defaultMode: true });
+          if (!itemPickerCacheRef.current.has(key)) {
+            await warmSlot(slotName, true);
+          }
+        }))
+      ];
     runQueue(moreTasks, moreTasks.length).catch(() => {}).finally(() => { decPrecache(); });
         }, 800);
         // Warm talisman bases shortly after: default (all) and MYTHIC rarity
         setTimeout(() => {
           if (cancelled) return;
     incPrecache();
-      const talisTasks = [() => warmTalisBase(''), () => warmTalisBase('MYTHIC')];
+  const talisTasks = ['' , ...RARITIES].map(r => () => warmTalisBase(r));
     runQueue(talisTasks, PRECACHE_TALIS_CONC).catch(() => {}).finally(() => { decPrecache(); });
         }, 200);
       } catch {}
