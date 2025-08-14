@@ -1248,7 +1248,7 @@ export default function Planner({ variant = 'grid' }) {
           if (!cancelled) setTalisCache(talisBaseKey, { base, ts: Date.now() });
         };
   const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
-  await runQueue(itemTasks, PRECACHE_ITEMS_CONC);
+  await runQueue(itemTasks, itemTasks.length);
   // Initial batch done
   decPrecache();
         // Kick off setOnly=true warming shortly after, but don't block
@@ -1256,7 +1256,7 @@ export default function Planner({ variant = 'grid' }) {
           if (cancelled) return;
   incPrecache();
       const moreTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, true));
-    runQueue(moreTasks, PRECACHE_ITEMS_SET_CONC).catch(() => {}).finally(() => { decPrecache(); });
+    runQueue(moreTasks, moreTasks.length).catch(() => {}).finally(() => { decPrecache(); });
         }, 800);
         // Warm talisman bases shortly after: default (all) and MYTHIC rarity
         setTimeout(() => {
