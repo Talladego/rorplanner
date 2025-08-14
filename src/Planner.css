@@ -57,6 +57,11 @@
   border-radius: 6px;
   padding: 6px 8px;
 }
+/* Small career icon preview in toolbar */
+.toolbar label { align-items: center; }
+/* Use the icon's natural size (no forced width/height) */
+.toolbar .career-icon-slot{ display:inline-flex; align-items:center; justify-content:center; min-width:var(--career-icon-min-w,24px); min-height:var(--career-icon-min-h,24px); margin-right:6px; }
+.toolbar .career-icon { border-radius: 4px; border: 1px solid #333; background: #111; display:block; }
 
 /* Modal styles */
 .modal-backdrop {

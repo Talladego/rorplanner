@@ -116,12 +116,8 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
       after = hasNext ? (conn.pageInfo.endCursor || undefined) : undefined;
     }
   }
-  // First try with usableByCareer if provided; if nothing came back, retry without it
+  // Only use server-side career filter when provided; do not retry without it
   await pageAll(usableCareer);
-  if (career && out.length === 0) {
-    out = [];
-    await pageAll(undefined);
-  }
   return out;
 }
 

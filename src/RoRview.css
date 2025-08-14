@@ -39,6 +39,11 @@
 .ror-toolbar{ grid-column:1 / -1; display:flex; gap:8px; align-items:center; padding:6px 8px; background: linear-gradient(180deg, #111215, #0f1013); border:1px solid var(--ror-border); border-radius:8px; }
 .ror-toolbar select,.ror-toolbar input,.ror-toolbar button{ background:#0e1014; color:var(--ror-text); border:1px solid #2a2f3b; border-radius:6px; padding:6px 8px; }
 .ror-toolbar button{ cursor:pointer; }
+/* Small career icon preview next to career select */
+.ror-toolbar label{ display:inline-flex; align-items:center; }
+/* Use natural image size for icon */
+.ror-toolbar .career-icon-slot{ display:inline-flex; align-items:center; justify-content:center; min-width:var(--career-icon-min-w,24px); min-height:var(--career-icon-min-h,24px); margin-right:6px; }
+.ror-toolbar .career-icon{ border-radius:4px; border:1px solid var(--ror-border); background:#0d0f14; display:block; }
 
 .ror-armor{ display:flex; flex-direction:column; gap:8px; align-content:start; padding:8px; }
 .ror-mid{ display:flex; flex-direction:column; gap:8px; align-content:start; padding:8px; }
