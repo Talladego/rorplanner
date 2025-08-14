@@ -888,6 +888,24 @@ export default function Planner({ variant = 'grid' }) {
     try { localStorage.setItem(`talismans:${career}`, JSON.stringify(talismans || {})); } catch {}
   }, [talismans, career]);
 
+  // Concurrency tuning for precache (configurable via env; falls back to hardwareConcurrency)
+  const hwc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 8;
+  const PRECACHE_ITEMS_CONC = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_ITEMS_CONC) ? Number(import.meta.env.VITE_PRECACHE_ITEMS_CONC) : NaN;
+    if (!Number.isNaN(v) && v > 0) return Math.floor(v);
+    return Math.min(16, Math.max(6, hwc));
+  })();
+  const PRECACHE_ITEMS_SET_CONC = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_ITEMS_SET_CONC) ? Number(import.meta.env.VITE_PRECACHE_ITEMS_SET_CONC) : NaN;
+    if (!Number.isNaN(v) && v > 0) return Math.floor(v);
+    return Math.max(4, Math.min(PRECACHE_ITEMS_CONC, Math.ceil(PRECACHE_ITEMS_CONC * 0.6)));
+  })();
+  const PRECACHE_TALIS_CONC = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_TALIS_CONC) ? Number(import.meta.env.VITE_PRECACHE_TALIS_CONC) : NaN;
+    if (!Number.isNaN(v) && v > 0) return Math.floor(v);
+    return Math.max(3, Math.floor(PRECACHE_ITEMS_CONC / 2));
+  })();
+
   // Precaching: warm item/talis base caches for all slots for current Career/CR/RR in default mode
   useEffect(() => {
   let cancelled = false;
@@ -1052,8 +1070,8 @@ export default function Planner({ variant = 'grid' }) {
             });
           if (!cancelled) itemPickerCacheRef.current.set(itemBaseKey, { base, ts: Date.now() });
         };
-        // Process item warm-ups with small concurrency to finish fast without saturating
-    const runQueue = async (tasks, limit = 6) => {
+    // Process item warm-ups with tuned concurrency to finish fast without saturating
+  const runQueue = async (tasks, limit = PRECACHE_ITEMS_CONC) => {
           let i = 0;
           const workers = new Array(Math.max(1, limit)).fill(0).map(async () => {
             while (!cancelled && i < tasks.length) {
@@ -1097,22 +1115,22 @@ export default function Planner({ variant = 'grid' }) {
           if (!cancelled) talisPickerCacheRef.current.set(talisBaseKey, { base, ts: Date.now() });
         };
   const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
-  await runQueue(itemTasks, 6);
+  await runQueue(itemTasks, PRECACHE_ITEMS_CONC);
   // Initial batch done
   decPrecache();
         // Kick off setOnly=true warming shortly after, but don't block
         setTimeout(() => {
           if (cancelled) return;
-      incPrecache();
-          const moreTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, true));
-    runQueue(moreTasks, 4).catch(() => {}).finally(() => { decPrecache(); });
+  incPrecache();
+      const moreTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, true));
+    runQueue(moreTasks, PRECACHE_ITEMS_SET_CONC).catch(() => {}).finally(() => { decPrecache(); });
         }, 800);
         // Warm talisman bases shortly after: default (all) and MYTHIC rarity
         setTimeout(() => {
           if (cancelled) return;
-      incPrecache();
-          const talisTasks = [() => warmTalisBase(''), () => warmTalisBase('MYTHIC')];
-      runQueue(talisTasks, 2).catch(() => {}).finally(() => { decPrecache(); });
+    incPrecache();
+      const talisTasks = [() => warmTalisBase(''), () => warmTalisBase('MYTHIC')];
+    runQueue(talisTasks, PRECACHE_TALIS_CONC).catch(() => {}).finally(() => { decPrecache(); });
         }, 200);
       } catch {}
     };
