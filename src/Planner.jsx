@@ -846,8 +846,39 @@ export default function Planner({ variant = 'grid' }) {
       setCachedTotal(ids.size);
     } catch {}
   };
-  const setItemCache = (key, value) => { try { itemPickerCacheRef.current.set(key, value); } catch {} recalcCacheCount(); };
-  const setTalisCache = (key, value) => { try { talisPickerCacheRef.current.set(key, value); } catch {} recalcCacheCount(); };
+  const dedupeById = (arr) => {
+    const map = new Map();
+    for (const n of Array.isArray(arr) ? arr : []) {
+      const id = String(n?.id || '');
+      if (id && !map.has(id)) map.set(id, n);
+    }
+    return Array.from(map.values());
+  };
+  const sortByLevelRarity = (a, b) => {
+    const ilA = Number(a?.itemLevel || a?.levelRequirement || a?.details?.itemLevel || a?.details?.levelRequirement || 0);
+    const ilB = Number(b?.itemLevel || b?.levelRequirement || b?.details?.itemLevel || b?.details?.levelRequirement || 0);
+    if (ilA !== ilB) return ilB - ilA;
+    const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+    const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+    const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
+    return rb - ra;
+  };
+  const setItemCache = (key, value) => {
+    try {
+      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
+      const val = base ? { ...value, base } : value;
+      itemPickerCacheRef.current.set(key, val);
+    } catch {}
+    recalcCacheCount();
+  };
+  const setTalisCache = (key, value) => {
+    try {
+      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
+      const val = base ? { ...value, base } : value;
+      talisPickerCacheRef.current.set(key, val);
+    } catch {}
+    recalcCacheCount();
+  };
   // Precache activity indicator
   const [isPrecaching, setIsPrecaching] = useState(false);
   const precacheOpsRef = useRef(0);
@@ -936,6 +967,23 @@ export default function Planner({ variant = 'grid' }) {
     const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_TALIS_CONC) ? Number(import.meta.env.VITE_PRECACHE_TALIS_CONC) : NaN;
     if (!Number.isNaN(v) && v > 0) return Math.floor(v);
     return Math.max(3, Math.floor(PRECACHE_ITEMS_CONC / 2));
+  })();
+
+  // Narrow precache bands around current CR/RR (env overrideable)
+  const PRECACHE_CR_BAND = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_CR_BAND) ? Number(import.meta.env.VITE_PRECACHE_CR_BAND) : NaN;
+    if (!Number.isNaN(v) && v >= 0) return Math.floor(v);
+    return 6; // default: within 6 CR below current CR
+  })();
+  const PRECACHE_RR_BELOW = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_RR_BELOW) ? Number(import.meta.env.VITE_PRECACHE_RR_BELOW) : NaN;
+    if (!Number.isNaN(v) && v >= 0) return Math.floor(v);
+    return 10; // default: within 10 RR below current RR
+  })();
+  const PRECACHE_TALIS_CR_BELOW = (() => {
+    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_TALIS_CR_BELOW) ? Number(import.meta.env.VITE_PRECACHE_TALIS_CR_BELOW) : NaN;
+    if (!Number.isNaN(v) && v >= 0) return Math.floor(v);
+    return 12; // default: talismans within 12 CR below current CR
   })();
 
   // Precaching: warm item/talis base caches for all slots for current Career/CR/RR in default mode
@@ -1087,8 +1135,9 @@ export default function Planner({ variant = 'grid' }) {
             .filter((n) => {
               const reqLvlNum = Number(n?.levelRequirement || 0);
               const reqRRNum = Number(n?.renownRankRequirement || 0);
-              const withinLvl = !reqLvlNum || Math.abs(reqLvlNum - careerRank) <= 10;
-              const withinRR = !reqRRNum || (renownRank - reqRRNum) <= 20;
+              // Prefer items close to current CR and not far below RR
+              const withinLvl = !reqLvlNum || (careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= PRECACHE_CR_BAND;
+              const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
               return withinLvl && withinRR;
             })
             .sort((a,b) => {
@@ -1885,10 +1934,10 @@ export default function Planner({ variant = 'grid' }) {
             const reqRRNum = Number(n?.renownRankRequirement || 0);
             if (reqLvlNum > careerRank) return false;
             if (reqRRNum > renownRank) return false;
-            // Default mode band: keep level within ±10; allow renown up to 20 below current RR
+            // Default mode band: prefer items close to current CR and not far below RR
             if (defaultMode) {
-              const withinLvl = !reqLvlNum || Math.abs(reqLvlNum - careerRank) <= 10;
-              const withinRR = !reqRRNum || (renownRank - reqRRNum) <= 20;
+              const withinLvl = !reqLvlNum || (careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= PRECACHE_CR_BAND;
+              const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
               if (!withinLvl || !withinRR) return false;
             }
             // Name filter
@@ -1951,12 +2000,12 @@ export default function Planner({ variant = 'grid' }) {
               return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
             })
             .filter((n) => {
-              // Default mode band: keep level within ±10; allow renown up to 20 below current RR
+              // Default mode band (fallback path): prefer items close to current CR/RR
               if (defaultMode) {
                 const reqLvlNum = Number(n?.levelRequirement || 0);
                 const reqRRNum = Number(n?.renownRankRequirement || 0);
-                const withinLvl = !reqLvlNum || Math.abs(reqLvlNum - careerRank) <= 10;
-                const withinRR = !reqRRNum || (renownRank - reqRRNum) <= 20;
+                const withinLvl = !reqLvlNum || (careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= PRECACHE_CR_BAND;
+                const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
                 if (!withinLvl || !withinRR) return false;
               }
               return true;
@@ -1988,8 +2037,8 @@ export default function Planner({ variant = 'grid' }) {
                 if (defaultMode) {
                   const reqLvlNum = Number(n?.levelRequirement || 0);
                   const reqRRNum = Number(n?.renownRankRequirement || 0);
-                  const withinLvl = !reqLvlNum || Math.abs(reqLvlNum - careerRank) <= 10;
-                  const withinRR = !reqRRNum || (renownRank - reqRRNum) <= 20;
+                  const withinLvl = !reqLvlNum || (careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= PRECACHE_CR_BAND;
+                  const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
                   if (!withinLvl || !withinRR) return false;
                 }
                 return true;
