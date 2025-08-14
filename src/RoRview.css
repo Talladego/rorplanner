@@ -88,5 +88,6 @@
 .ror-status .ver{ font-weight:700; font-size:0.95rem; }
 .ror-status .status-left .build{ opacity:0.9; font-size:0.9rem; }
 .ror-status .status-right{ display:flex; align-items:center; gap:8px; font-size:0.9rem; }
+.ror-status .status-right .mem{ opacity:0.9; font-size:0.88rem; }
 .ror-status .dot{ width:10px; height:10px; border-radius:50%; background:#2db84d; display:inline-block; box-shadow:0 0 8px rgba(45,184,77,0.45), 0 0 0 1px #2a2f3b inset; }
 .ror-status .dot.busy{ background:#e5534b; box-shadow:0 0 8px rgba(229,83,75,0.6), 0 0 0 1px #2a2f3b inset; }

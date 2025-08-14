@@ -813,6 +813,9 @@ export default function Planner({ variant = 'grid' }) {
   const [pickerDebug, setPickerDebug] = useState(null);
   // talismans equipped per gear slot: { [slotName]: [t1,t2,...] }
   const [talismans, setTalismans] = useState({});
+  // Memory usage sampling (client-only)
+  const [memText, setMemText] = useState('N/A');
+  const [memTitle, setMemTitle] = useState('');
   // Caches to avoid refetching when slot + filters + context unchanged
   const itemPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
   const talisPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
@@ -953,6 +956,52 @@ export default function Planner({ variant = 'grid' }) {
   useEffect(() => {
     try { localStorage.setItem(`talismans:${career}`, JSON.stringify(talismans || {})); } catch {}
   }, [talismans, career]);
+
+  // Periodically sample approximate JS heap usage; best-effort (not supported in all browsers)
+  useEffect(() => {
+    let timer = null;
+    const fmtMB = (bytes) => {
+      const mb = bytes / (1024 * 1024);
+      if (!isFinite(mb)) return 'N/A';
+      return mb >= 100 ? Math.round(mb) + ' MB' : mb.toFixed(1) + ' MB';
+    };
+    const sample = async () => {
+      try {
+        // Chrome-specific detailed API (async); may throw if not cross-origin isolated
+        const anyPerf = performance;
+        if (anyPerf && typeof anyPerf.measureUserAgentSpecificMemory === 'function') {
+          try {
+            const r = await anyPerf.measureUserAgentSpecificMemory();
+            const used = Number(r?.bytes || 0);
+            setMemText(fmtMB(used));
+            setMemTitle('UserAgent memory');
+            return;
+          } catch { /* fall through to basic heap sampling */ }
+        }
+        // Basic Chrome API
+        const pm = (performance && performance.memory) ? performance.memory : null;
+        if (pm && typeof pm.usedJSHeapSize === 'number') {
+          const used = Number(pm.usedJSHeapSize || 0);
+          const limit = Number(pm.jsHeapSizeLimit || 0);
+          const total = Number(pm.totalJSHeapSize || 0);
+          setMemText(fmtMB(used));
+          const pct = (limit && used) ? Math.round((used / limit) * 100) : null;
+          setMemTitle(`Heap used: ${fmtMB(used)} / limit: ${fmtMB(limit)}${total ? `, total: ${fmtMB(total)}` : ''}${pct != null ? ` (${pct}%)` : ''}`);
+          return;
+        }
+        // Unsupported
+        setMemText('N/A');
+        setMemTitle('Memory usage not available');
+      } catch {
+        setMemText('N/A');
+        setMemTitle('');
+      }
+    };
+    // Initial sample and interval
+    sample();
+    timer = setInterval(sample, 8000);
+    return () => { if (timer) clearInterval(timer); };
+  }, []);
 
   // Concurrency tuning for precache (configurable via env; falls back to hardwareConcurrency)
   const hwc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 8;
@@ -2747,6 +2796,7 @@ export default function Planner({ variant = 'grid' }) {
             <span>{isPrecaching ? 'Loading items...' : 'Items loaded.'} (items: {cachedItemCount}, talismans: {cachedTalisCount})</span>
           </div>
           <div className="status-right">
+            <span className="mem" title={memTitle || undefined}>mem: {memText}</span>
             <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
           </div>
         </div>
