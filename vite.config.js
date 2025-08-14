@@ -7,6 +7,10 @@ export default defineConfig({
   // If you publish under a different repo name, update this to '/<repo>/'
   base: '/rorplanner/',
   plugins: [react()],
+  define: {
+    // Inject a build timestamp for display in the app footer
+    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString())
+  },
   server: {
     proxy: {
       // Proxy GraphQL calls during dev to avoid browser CORS issues

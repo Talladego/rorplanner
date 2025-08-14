@@ -29,17 +29,44 @@ function toEnum(val) {
   return String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
-function mapCareerEnum(val) {
+let CACHED_CAREER_ENUMS = null;
+async function fetchCareerEnumsOnce() {
+  if (Array.isArray(CACHED_CAREER_ENUMS)) return CACHED_CAREER_ENUMS;
+  const q = `query($name:String!){ __type(name:$name){ enumValues { name } } }`;
+  try {
+    const data = await post(q, { name: 'Career' });
+    const vals = (data?.__type?.enumValues || []).map(v => v.name);
+    CACHED_CAREER_ENUMS = vals;
+  } catch {
+    CACHED_CAREER_ENUMS = null;
+  }
+  return CACHED_CAREER_ENUMS;
+}
+
+export function mapCareerEnum(val) {
   const v = toEnum(val);
   // Known mismatches between UI labels and GraphQL enums
   if (v === 'BLACKGUARD') return 'BLACK_GUARD';
   return v;
 }
 
-export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq, rarityEq }) {
-  const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career){
-    items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer){
-      edges{ node{ id name description type slot levelRequirement itemLevel renownRankRequirement iconUrl talismanSlots rarity uniqueEquipped careerRestriction itemSet{ id name } stats { stat value percentage } } }
+export async function mapCareerEnumDynamic(val) {
+  const v = toEnum(val);
+  if (v === 'BLACKGUARD') return 'BLACK_GUARD';
+  const enums = await fetchCareerEnumsOnce();
+  if (Array.isArray(enums) && enums.includes(v)) return v;
+  // Try a fuzzy match by removing singular/plural/spacing differences (we already underscore)
+  if (Array.isArray(enums)) {
+    const found = enums.find(e => e.replace(/_/g, '') === v.replace(/_/g, ''));
+    if (found) return found;
+  }
+  return v;
+}
+
+export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeEq, nameContains, allowAnyName = false, slotEq, rarityEq, maxLevelRequirement, maxRenownRankRequirement, order } = {}) {
+  const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career,$order:[ItemSortInput!]){
+    items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer, order:$order){
+      nodes{ id name description type slot levelRequirement itemLevel renownRankRequirement iconUrl talismanSlots rarity uniqueEquipped careerRestriction itemSet{ id name } stats { stat value percentage } }
       pageInfo{ hasNextPage endCursor }
     }
   }`;
@@ -52,6 +79,12 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   }
   if (rarityEq) {
     where.rarity = { eq: toEnum(rarityEq) };
+  }
+  if (typeof maxLevelRequirement === 'number') {
+    where.levelRequirement = { lte: maxLevelRequirement };
+  }
+  if (typeof maxRenownRankRequirement === 'number') {
+    where.renownRankRequirement = { lte: maxRenownRankRequirement };
   }
   // Use server-side career filter when provided; we will fallback without it if needed
   const usableCareer = career ? mapCareerEnum(career) : undefined;
@@ -67,7 +100,7 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
     while (hasNext) {
       let data;
       try {
-        data = await post(q, { first: currentFirst, after, where, usableByCareer: usableOverride });
+        data = await post(q, { first: currentFirst, after, where, usableByCareer: usableOverride, order });
       } catch (err) {
         const msg = String(err?.message || '');
         if (/maximum allowed items per page/i.test(msg) && currentFirst > 1) {
@@ -77,8 +110,8 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
         throw err;
       }
       const conn = data?.items;
-      const edges = conn?.edges || [];
-      for (const e of edges) out.push(e.node);
+      const nodes = conn?.nodes || [];
+      for (const n of nodes) out.push(n);
       hasNext = !!(conn?.pageInfo?.hasNextPage) && out.length < totalLimit;
       after = hasNext ? (conn.pageInfo.endCursor || undefined) : undefined;
     }
@@ -104,4 +137,11 @@ export async function fetchItemDetails(id) {
   }`;
   const data = await post(q, { id: String(id) });
   return data?.item || null;
+}
+
+// Optional: pre-warm the career enum cache on app load;
+// non-blocking and failures are ignored.
+export function warmCareerEnums() {
+  // Fire and forget
+  fetchCareerEnumsOnce().catch(() => {});
 }

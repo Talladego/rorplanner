@@ -34,6 +34,7 @@ class ErrorBoundary extends React.Component {
 
 function App() {
   const appVersion = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_VERSION) ? import.meta.env.VITE_APP_VERSION : pkg.version;
+  const buildTime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_TIME) ? import.meta.env.VITE_BUILD_TIME : '';
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, margin: '8px 0 0 0' }}>
@@ -46,6 +47,11 @@ function App() {
       </ErrorBoundary>
       <div className="app-footer">
         <span className="app-version app-version-bottom" title={`Version ${appVersion}`}>v{appVersion}</span>
+        {buildTime ? (
+          <span className="app-build" style={{ marginLeft: 8, opacity: 0.8 }} title={`Built at ${buildTime}`}>
+            • built {new Date(buildTime).toLocaleString()}
+          </span>
+        ) : null}
       </div>
     </>
   );
