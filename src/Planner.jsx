@@ -127,6 +127,19 @@ let ICON_FALLBACKS_CACHE = null;
 function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid', talisCount = 0, talismans = [], onTalisPick, onTalisClear }) {
   const tipClass = `gear-tooltip`;
   const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const buildEmptyGearTooltip = () => (
+    <div className={`tooltip-card`} role="tooltip">
+      <div className="tooltip-header">
+        <img className="tooltip-icon" src={'https://armory.returnofreckoning.com/item/1'} alt="" />
+        <div>
+          <div className="tooltip-name">Empty Slot</div>
+        </div>
+      </div>
+      <div className="tooltip-body">
+        <div className="tooltip-section"><div>Click to choose {name}</div></div>
+      </div>
+    </div>
+  );
   const buildEmptyTalisTooltip = () => (
     <div className={`tooltip-card`} role="tooltip">
       <div className="tooltip-header">
@@ -136,7 +149,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
         </div>
       </div>
       <div className="tooltip-body">
-        <div className="tooltip-section"><div>Click to choose a talisman</div></div>
+        <div className="tooltip-section"><div>Click to choose talisman</div></div>
       </div>
     </div>
   );
@@ -290,7 +303,9 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
     const rarity = String(t.rarity || det.rarity || '').toLowerCase();
     const stats = Array.isArray(det.stats) ? det.stats : [];
     const icon = det.iconUrl || t.iconUrl || (det.iconId ? `https://armory.returnofreckoning.com/item/${det.iconId}` : EMPTY_ICON);
-  const minRank = Number(det.levelRequirement || det.itemLevel || det.minimumRank || 0) || null;
+    const minRank = Number(det.levelRequirement || det.itemLevel || det.minimumRank || 0) || null;
+    const tType = det.type || t.type;
+    const desc = det.description || t.description;
     return (
       <div className={`tooltip-card ${rarity ? 'rarity-' + rarity : ''}`} role="tooltip">
         <div className="tooltip-header">
@@ -300,6 +315,9 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
           </div>
         </div>
         <div className="tooltip-body">
+          {tType ? (
+            <div className="tooltip-section"><div>{formatTitle(String(tType))}</div></div>
+          ) : null}
           {minRank ? (
             <div className="tooltip-section"><div>Minimum Rank: {minRank}</div></div>
           ) : null}
@@ -315,6 +333,12 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {desc ? (
+            <div className="tooltip-section">
+              <div className="section-title">Description</div>
+              <div style={{ opacity: 0.95 }}>{desc}</div>
             </div>
           ) : null}
         </div>
@@ -376,34 +400,33 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
             <div className="slot-row">
               <div className="gear-slot" data-slotname={name} aria-label={itemLabel}>
                 <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
-                <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
+                <div className={tipClass}>{item ? buildTooltip() : buildEmptyGearTooltip()}</div>
+              </div>
+              {/* Fixed-width talisman column to align labels even when empty */}
+              <div className="talis-col">
+                {Array.from({ length: talisCount || 0 }).map((_, i) => {
+                  const t = talismans?.[i] || null;
+                  const tIcon = t?.details?.iconUrl || t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
+                  return (
+                    <div key={i} className={`talis-slot${t ? ' filled' : ''}`} data-slotname={`${name}::talis::${i}`} onClick={(e) => { e.stopPropagation(); onTalisPick?.(name, i); }}>
+                      <img className="talis-icon-small" src={t ? tIcon : 'https://armory.returnofreckoning.com/item/1'} alt="" />
+                      <div className={tipClass}>{t ? buildTalisTooltip(t) : buildEmptyTalisTooltip()}</div>
+                      {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
+                    </div>
+                  );
+                })}
               </div>
               <div className="item-label-right">
                 {rightLines.map((ln, idx) => (
                   <span key={idx} className={idx === 0 ? `line name-line ${rarityClass}` : 'line meta-line'}>{ln}</span>
                 ))}
-                {talisCount > 0 && (
-                  <div className="talis-row">
-                    {Array.from({ length: talisCount }).map((_, i) => {
-                      const t = talismans?.[i] || null;
-                      const tIcon = t?.details?.iconUrl || t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : 'https://armory.returnofreckoning.com/item/1');
-                      return (
-                        <div key={i} className={`talis-slot${t ? ' filled' : ''}`} data-slotname={`${name}::talis::${i}`} onClick={(e) => { e.stopPropagation(); onTalisPick?.(name, i); }}>
-                          <img className="talis-icon-small" src={t ? tIcon : 'https://armory.returnofreckoning.com/item/1'} alt="" />
-                          <div className={tipClass}>{t ? buildTalisTooltip(t) : buildEmptyTalisTooltip()}</div>
-                          {t ? <button className="talis-clear" title="Clear" onClick={(e) => { e.stopPropagation(); onTalisClear?.(name, i); }}>×</button> : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </div>
           );
         })() : (
       <div className="gear-slot" data-slotname={name} aria-label={itemLabel}>
             <img src={iconUrl} alt={item?.name || name} className="gear-icon" />
-            <div className={tipClass}>{item ? buildTooltip() : ('Click to choose ' + name)}</div>
+        <div className={tipClass}>{item ? buildTooltip() : buildEmptyGearTooltip()}</div>
           </div>
         )}
       </div>

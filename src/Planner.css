@@ -385,6 +385,8 @@
   z-index: 10;
   pointer-events: auto;
 }
+/* Ensure empty gear tooltip uses horizontal card (avoids column layout glitch) */
+.planner-grid .gear-slot .gear-tooltip .tooltip-card{ display:block; }
 .talis-slot {
   position: relative;
   width: 20px;

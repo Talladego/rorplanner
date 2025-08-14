@@ -48,13 +48,16 @@
 /* slot wrapper and icon */
 .ror-slot{ display:flex; flex-direction:column; gap:6px; }
 .ror-slot .slot-label{ font-size:0.78rem; color: var(--ror-text); opacity:0.95; }
-.ror-slot .slot-row{ display:flex; align-items:flex-start; gap:8px; min-width:0; }
+.ror-slot .slot-row{ display:flex; align-items:flex-start; gap:10px; min-width:0; }
+.ror-slot .talis-col{ display:flex; flex-direction:column; gap:4px; width:22px; /* fixed width for alignment */ padding-top:2px; }
+.ror-slot .talis-col .talis-slot{ position:relative; width:18px; height:18px; border:1px solid var(--ror-border); border-radius:3px; background:#101219; box-shadow:0 1px 2px rgba(0,0,0,0.35); }
+.ror-slot .talis-col .talis-icon-small{ width:100%; height:100%; object-fit:cover; border-radius:3px; }
 /* Place mini talismans to the right of the textual label in RoR view */
 .ror-slot .talis-row{ display:inline-flex; gap:4px; margin-left:8px; align-self:flex-start; }
 .ror-slot .talis-slot{ position:relative; width:18px; height:18px; border:1px solid var(--ror-border); border-radius:3px; background:#101219; box-shadow:0 1px 2px rgba(0,0,0,0.35); }
 .ror-slot .talis-icon-small{ width:100%; height:100%; object-fit:cover; border-radius:3px; }
 .ror-slot .talis-slot .talis-clear{ top:-6px; right:-6px; }
-.ror-slot .item-label-right{ display:flex; flex-direction:column; gap:2px; min-width:0; text-align:left; }
+.ror-slot .item-label-right{ display:flex; flex-direction:column; gap:2px; min-width:0; text-align:left; width: 250px; }
 .ror-slot .item-label-right .line{ display:block; font-size:0.78rem; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ror-slot .item-label-right .name-line{ font-weight:600; /* color comes from rarity/set class */ }
 .ror-slot .item-label-right .meta-line{ opacity:0.8; color: var(--ror-text); }
