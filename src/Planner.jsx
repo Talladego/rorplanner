@@ -1476,6 +1476,42 @@ export default function Planner({ variant = 'grid' }) {
         ]);
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
+        // Precompute slot variants and friendly slot label helpers before any cache derivation
+        const slotVariants = (() => {
+          if (target === 'helm') return ['HELM'];
+          if (target === 'shoulders') return ['SHOULDER'];
+          if (target === 'cloak') return ['BACK'];
+          if (target === 'body') return ['BODY'];
+          if (target === 'gloves') return ['GLOVES'];
+          if (target === 'belt') return ['BELT'];
+          if (target === 'boots') return ['BOOTS'];
+          if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
+          if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
+          if (target === 'ranged weapon') return ['RANGED_WEAPON'];
+          if (target === 'event item') return ['EVENT'];
+          if (target === 'pocket 1') return ['POCKET1','POCKET2'];
+          if (target === 'pocket 2') return ['POCKET1','POCKET2'];
+          return [];
+        })();
+        const friendlySlot = (s) => {
+          const raw = String(s || '').toUpperCase();
+          if (/^JEWELLERY([1-4])$/.test(raw)) {
+            const n = raw.slice(-1);
+            return `jewelry slot ${n}`;
+          }
+          if (raw === 'HELM') return 'helm';
+          if (raw === 'SHOULDER') return 'shoulders';
+          if (raw === 'BACK') return 'cloak';
+          if (raw === 'BODY') return 'body';
+          if (raw === 'GLOVES') return 'gloves';
+          if (raw === 'BELT') return 'belt';
+          if (raw === 'BOOTS') return 'boots';
+          if (raw === 'POCKET1') return 'pocket 1';
+          if (raw === 'POCKET2') return 'pocket 2';
+          if (raw === 'EVENT') return 'event item';
+          return raw.replace(/_/g, ' ').toLowerCase();
+        };
+        const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
   if (isTalisPicker) {
           // host context for validation
           const hostName = pickerTalisHost?.slotName || '';
@@ -1663,23 +1699,6 @@ export default function Planner({ variant = 'grid' }) {
         }
   // Precompute likely server slot enums for this target for fetch and raw matching
   const defaultOrder = defaultMode ? [ { itemLevel: 'DESC' }, { rarity: 'DESC' } ] : undefined;
-        const slotVariants = (() => {
-          // Use official GraphQL EquipSlot enums first; avoid non-existent synonyms in server queries
-          if (target === 'helm') return ['HELM'];
-          if (target === 'shoulders') return ['SHOULDER'];
-          if (target === 'cloak') return ['BACK'];
-          if (target === 'body') return ['BODY'];
-          if (target === 'gloves') return ['GLOVES'];
-          if (target === 'belt') return ['BELT'];
-          if (target === 'boots') return ['BOOTS'];
-          if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
-          if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
-          if (target === 'ranged weapon') return ['RANGED_WEAPON'];
-          if (target === 'event item') return ['EVENT'];
-          if (target === 'pocket 1') return ['POCKET1','POCKET2'];
-          if (target === 'pocket 2') return ['POCKET1','POCKET2'];
-          return [];
-        })();
         // Fetch career-scoped; for jewelry, fetch with and without type filter and merge
   let itemsRawCareer = [];
         // Base cache key for item picker: slot target + filters + caps (pre-unique filtering)
@@ -1897,25 +1916,7 @@ export default function Planner({ variant = 'grid' }) {
           itemsRawCareer = Array.from(byId.values());
         }
         // Apply client-side slot filtering to handle naming differences (e.g., jewelry)
-        const acceptable = Array.from(new Set([...(mapExact.get(target) || []), target]));
-          const friendlySlot = (s) => {
-          const raw = String(s || '').toUpperCase();
-          if (/^JEWELLERY([1-4])$/.test(raw)) {
-            const n = raw.slice(-1);
-            return `jewelry slot ${n}`;
-          }
-            if (raw === 'HELM') return 'helm';
-            if (raw === 'SHOULDER') return 'shoulders';
-            if (raw === 'BACK') return 'cloak';
-            if (raw === 'BODY') return 'body';
-            if (raw === 'GLOVES') return 'gloves';
-            if (raw === 'BELT') return 'belt';
-            if (raw === 'BOOTS') return 'boots';
-            if (raw === 'POCKET1') return 'pocket 1';
-            if (raw === 'POCKET2') return 'pocket 2';
-            if (raw === 'EVENT') return 'event item';
-          return raw.replace(/_/g, ' ').toLowerCase();
-        };
+  // acceptable and friendlySlot precomputed earlier
         // No broad accessory-like fallback; rely on exact mapping and raw equip slot checks
         const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
         const itemsPre = (itemsRawCareer || [])
