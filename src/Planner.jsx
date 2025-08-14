@@ -816,18 +816,20 @@ export default function Planner({ variant = 'grid' }) {
   // Caches to avoid refetching when slot + filters + context unchanged
   const itemPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
   const talisPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
-  // Cached totals for status indicator
-  const [cachedTotal, setCachedTotal] = useState(0);
+  // Cached totals for status indicator (unique IDs)
+  const [cachedItemCount, setCachedItemCount] = useState(0);
+  const [cachedTalisCount, setCachedTalisCount] = useState(0);
   const recalcCacheCount = () => {
     try {
-      const ids = new Set();
+      const itemIds = new Set();
+      const talisIds = new Set();
       try {
         for (const v of itemPickerCacheRef.current.values()) {
           const arr = Array.isArray(v?.base) ? v.base : (Array.isArray(v?.items) ? v.items : null);
           if (Array.isArray(arr)) {
             for (const n of arr) {
               const id = String(n?.id || '');
-              if (id) ids.add(id);
+              if (id) itemIds.add(id);
             }
           }
         }
@@ -838,12 +840,13 @@ export default function Planner({ variant = 'grid' }) {
           if (Array.isArray(arr)) {
             for (const n of arr) {
               const id = String(n?.id || '');
-              if (id) ids.add(id);
+              if (id) talisIds.add(id);
             }
           }
         }
       } catch {}
-      setCachedTotal(ids.size);
+      setCachedItemCount(itemIds.size);
+      setCachedTalisCount(talisIds.size);
     } catch {}
   };
   const dedupeById = (arr) => {
@@ -2741,7 +2744,7 @@ export default function Planner({ variant = 'grid' }) {
         <div className="ror-status">
           <div className="status-left prefetch" title={isPrecaching ? 'Loading items...' : 'Items loaded.'}>
             <span className={`dot${isPrecaching ? ' busy' : ''}`} />
-            <span>{isPrecaching ? 'Loading items...' : 'Items loaded.'} ({cachedTotal})</span>
+            <span>{isPrecaching ? 'Loading items...' : 'Items loaded.'} (items: {cachedItemCount}, talismans: {cachedTalisCount})</span>
           </div>
           <div className="status-right">
             <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
