@@ -2690,9 +2690,9 @@ export default function Planner({ variant = 'grid' }) {
         </div>
         {/* Status row at bottom of container */}
         <div className="ror-status">
-          <div className="status-left prefetch" title={isPrecaching ? 'Loading data...' : 'Data loaded.'}>
+          <div className="status-left prefetch" title={isPrecaching ? 'Loading items...' : 'Items loaded.'}>
             <span className={`dot${isPrecaching ? ' busy' : ''}`} />
-            <span>{isPrecaching ? 'Loading data...' : 'Data loaded.'} ({cachedTotal})</span>
+            <span>{isPrecaching ? 'Loading items...' : 'Items loaded.'} ({cachedTotal})</span>
           </div>
           <div className="status-right">
             <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
