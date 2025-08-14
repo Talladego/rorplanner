@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchItems, fetchItemDetails, mapCareerEnum, mapCareerEnumDynamic, warmCareerEnums } from './gqlClient';
 import './Planner.css';
 import { CAREERS, DEFAULT_CAREER } from './config';
+import pkg from '../package.json';
 
 const slots = [
   { name: "Event Item", gridArea: "event" },
@@ -781,6 +782,9 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
 }
 
 export default function Planner({ variant = 'grid' }) {
+  // App version/build for status row in RoR view
+  const appVersion = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_VERSION) ? import.meta.env.VITE_APP_VERSION : (pkg?.version || '0.0.0');
+  const buildTime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_TIME) ? import.meta.env.VITE_BUILD_TIME : '';
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(null);
   const [pickerIsTalis, setPickerIsTalis] = useState(false);
@@ -813,6 +817,15 @@ export default function Planner({ variant = 'grid' }) {
   // Caches to avoid refetching when slot + filters + context unchanged
   const itemPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
   const talisPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
+  // Precache activity indicator
+  const [isPrecaching, setIsPrecaching] = useState(false);
+  const precacheOpsRef = useRef(0);
+  const incPrecache = () => { precacheOpsRef.current += 1; setIsPrecaching(true); };
+  const decPrecache = () => {
+    const v = Math.max(0, (precacheOpsRef.current || 0) - 1);
+    precacheOpsRef.current = v;
+    if (v === 0) setIsPrecaching(false);
+  };
 
   // No static item preload on Pages; rely on live GraphQL only
   // Build source metadata for stats tooltip contributions
@@ -886,6 +899,8 @@ export default function Planner({ variant = 'grid' }) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const run = async () => {
       try {
+  // Mark precache activity starting (for initial items warm-up). Follow-up batches increment separately.
+  incPrecache();
     // Warm GraphQL career enums to avoid early round-trips during mapping
     try { warmCareerEnums(); } catch {}
         const normalize = (s) => (s || '').trim().toLowerCase().replaceAll('jewellry', 'jewelry');
@@ -1082,24 +1097,28 @@ export default function Planner({ variant = 'grid' }) {
           });
           if (!cancelled) talisPickerCacheRef.current.set(talisBaseKey, { base, ts: Date.now() });
         };
-    const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
-    await runQueue(itemTasks, 6);
+  const itemTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, false));
+  await runQueue(itemTasks, 6);
+  // Initial batch done
+  decPrecache();
         // Kick off setOnly=true warming shortly after, but don't block
         setTimeout(() => {
           if (cancelled) return;
+      incPrecache();
           const moreTasks = slotsToPrecache.map((slotName) => () => warmSlot(slotName, true));
-      runQueue(moreTasks, 4).catch(() => {});
+    runQueue(moreTasks, 4).catch(() => {}).finally(() => { decPrecache(); });
         }, 800);
         // Warm talisman bases shortly after: default (all) and MYTHIC rarity
         setTimeout(() => {
           if (cancelled) return;
+      incPrecache();
           const talisTasks = [() => warmTalisBase(''), () => warmTalisBase('MYTHIC')];
-          runQueue(talisTasks, 2).catch(() => {});
+      runQueue(talisTasks, 2).catch(() => {}).finally(() => { decPrecache(); });
         }, 200);
       } catch {}
     };
     startTimer = setTimeout(run, 80);
-  return () => { cancelled = true; if (startTimer) clearTimeout(startTimer); };
+  return () => { cancelled = true; if (startTimer) clearTimeout(startTimer); precacheOpsRef.current = 0; setIsPrecaching(false); };
   }, [career, careerRank, renownRank, pickerOpen]);
 
   const filteredItems = useMemo(() => {
@@ -2536,7 +2555,7 @@ export default function Planner({ variant = 'grid' }) {
   const midOrder = ['Main Hand', 'Off Hand', 'Ranged Weapon', 'Event Item', 'Pocket 1', 'Pocket 2'];
     const jewelOrder = ['Jewelry Slot 1', 'Jewelry Slot 2', 'Jewelry Slot 3', 'Jewelry Slot 4'];
     return (
-      <div className="ror-container">
+  <div className="ror-container">
         <div className="ror-frame">
         <div
           className="ror-root"
@@ -2619,6 +2638,19 @@ export default function Planner({ variant = 'grid' }) {
             <StatsPanel totals={totals} activeSetBonuses={activeSetBonuses} defenseList={combatSections.defenseList} offenseList={combatSections.offenseList} magicList={combatSections.magicList} primaryContrib={primaryContrib} defContrib={combatSections.defContrib} offContrib={combatSections.offContrib} magContrib={combatSections.magContrib} sourceMeta={sourceMeta} />
           </div>
         </div>
+        </div>
+        {/* Status row at bottom of container */}
+        <div className="ror-status">
+          <div className="status-left">
+            <span className="ver" title={`Version ${appVersion}`}>v{appVersion}</span>
+            {buildTime ? (
+              <span className="build" title={`Built at ${buildTime}`}>• built {new Date(buildTime).toLocaleString()}</span>
+            ) : null}
+          </div>
+          <div className="status-right prefetch" title={isPrecaching ? 'Precaching data…' : 'Idle'}>
+            <span className={`dot${isPrecaching ? ' busy' : ''}`} />
+            <span>{isPrecaching ? 'Precaching…' : 'Idle'}</span>
+          </div>
         </div>
   <ItemPicker
           open={pickerOpen}

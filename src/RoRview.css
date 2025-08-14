@@ -13,7 +13,7 @@
   background: linear-gradient(180deg, #0b0b0c, #0d0e12 70%);
   color: var(--ror-text);
   box-sizing:border-box;
-  padding: 0; /* let frame control outer spacing for snug alignment */
+  padding: 0 0 8px 0; /* leave space for status row */
   margin: 0 auto; /* equal left/right spacing */
   overflow: hidden; /* hide both axes scrollbars within the container */
 }
@@ -66,3 +66,25 @@
 .ror-container .gear-icon{ border-radius:6px; top:0; height:100%; }
 
 /* bottom weapons removed in 3-column layout */
+
+/* Status row */
+.ror-status{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+  max-width: calc(220px + 220px + 220px + 360px + 12px * 3 + 24px); /* approx grid width + padding */
+  margin: 8px auto 0 auto;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, #111215, #0f1013);
+  border:1px solid var(--ror-border);
+  border-radius:8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.ror-status .status-left{ display:flex; align-items:center; gap:10px; }
+.ror-status .status-left .ver{ font-weight:700; font-size:0.95rem; }
+.ror-status .status-left .build{ opacity:0.9; font-size:0.9rem; }
+.ror-status .status-right{ display:flex; align-items:center; gap:8px; font-size:0.9rem; }
+.ror-status .status-right .dot{ width:10px; height:10px; border-radius:50%; background:#3a4a5f; display:inline-block; box-shadow:0 0 0 1px #2a2f3b inset; }
+.ror-status .status-right .dot.busy{ background:#2bb3ff; box-shadow:0 0 8px rgba(43,179,255,0.6); }
