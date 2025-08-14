@@ -35,6 +35,8 @@
   padding: 32px;
   border-radius: 16px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  /* Ensure absolutely-positioned children (like talisman chips) can render outside cells */
+  overflow: visible;
 }
 
 /* Toolbar inline with the top row of the grid */
@@ -378,6 +380,9 @@
   right: 0;
   display: inline-flex;
   gap: 4px;
+  /* Raise above adjacent grid cells so they remain visible */
+  z-index: 10;
+  pointer-events: auto;
 }
 .talis-slot {
   position: relative;
@@ -388,6 +393,7 @@
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.4);
   overflow: hidden;
+  z-index: 11;
 }
 .talis-slot.filled { border-color: #555; }
 .talis-slot:hover { outline: 1px solid #666; cursor: pointer; }
