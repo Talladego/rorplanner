@@ -526,7 +526,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   );
 }
 
-function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly, filterCareerLockedOnly, setFilterCareerLockedOnly, isTalis = false, activeCareer, debugInfo = null }) {
+function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly, isTalis = false, activeCareer, debugInfo = null }) {
   if (!open) return null;
   const fmt = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const [copied, setCopied] = useState(false);
@@ -546,11 +546,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
     const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
     return (typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0);
   };
-  const isCareerLockedForActive = (it) => {
-    const arr = Array.isArray(it?.careerRestriction) ? it.careerRestriction : [];
-    if (!arr.length) return false;
-    try { return arr.includes(mapCareerEnum(activeCareer)); } catch { return false; }
-  };
+  // Career-locked filter removed; server-side career scoping applies in fetchers
   const isVanity = (it) => {
     const typeUp = String(it?.type || it?.details?.type || '').toUpperCase();
     const slotRaw = String(it?.slotRaw || it?.slot || '').toUpperCase();
@@ -564,19 +560,41 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
   // Items visible after picker-side filters (e.g., Set items only and toggles)
   const visibleItems = useMemo(() => {
     if (!Array.isArray(items)) return [];
+    const lc = (s) => String(s || '').toLowerCase();
+    const statMatches = (it, needle) => {
+      if (!needle) return true;
+      const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+      const q = lc(needle);
+      return stats.some(s => lc(s?.stat || s?.name || s?.type || '').includes(q));
+    };
+    const rarityMatches = (it, wanted) => {
+      if (!wanted) return true;
+      const r = String(it?.rarity || it?.details?.rarity || '').toUpperCase();
+      return r === String(wanted).toUpperCase();
+    };
+    const nameMatches = (it, needle) => {
+      if (!needle) return true;
+      return lc(it?.name).includes(lc(needle));
+    };
     return items
+      // UI: filter by set-only when enabled (items only)
       .filter(it => {
         if (isTalis || !filterSetOnly) return true;
         const top = it?.itemSet?.name;
         const detSet = it?.details?.set?.name || it?.details?.itemSet?.name;
         return !!(top || detSet);
       })
-      .filter(it => isTalis || !filterCareerLockedOnly || isCareerLockedForActive(it))
-  // Always enforce stats-present for both items and talismans
-  .filter(it => hasStats(it))
-    // Always hide vanity/admin-like items for non-talisman lists
-    .filter(it => isTalis ? true : !isVanity(it));
-  }, [items, isTalis, filterSetOnly, filterCareerLockedOnly, activeCareer]);
+      // UI: name filter always applies to currently visible list
+      .filter(it => nameMatches(it, filterName))
+      // UI: stat filter always applies
+      .filter(it => statMatches(it, filterStat))
+      // UI: rarity filter always applies
+      .filter(it => rarityMatches(it, filterRarity))
+      // Always enforce stats-present for both items and talismans
+      .filter(it => hasStats(it))
+      // Always hide vanity/admin-like items for non-talisman lists
+      .filter(it => isTalis ? true : !isVanity(it));
+  }, [items, isTalis, filterSetOnly, filterName, filterStat, filterRarity, activeCareer]);
   const exportQuery = useMemo(() => {
     const q = { ...(debugInfo || {}) };
     // Ensure filters reflect current UI state (server snapshot may be stale)
@@ -585,7 +603,6 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
       stat: filterStat || '',
       rarity: filterRarity || '',
       setOnly: !!filterSetOnly,
-      careerLockedOnly: !!filterCareerLockedOnly,
     // Always-on client-side filters for items (not applied to talismans)
     statsOnly: !isTalis,
     hideVanity: !isTalis,
@@ -598,7 +615,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
     const final = q.final || {};
     q.final = { ...final, clientFinalCount: Array.isArray(visibleItems) ? visibleItems.length : 0 };
     return q;
-  }, [debugInfo, filterName, filterStat, filterRarity, filterSetOnly, filterCareerLockedOnly, slotName, isTalis, activeCareer, visibleItems]);
+  }, [debugInfo, filterName, filterStat, filterRarity, filterSetOnly, slotName, isTalis, activeCareer, visibleItems]);
   const exportPayload = useMemo(() => ({ query: exportQuery, results: visibleItems }), [exportQuery, visibleItems]);
   const exportText = useMemo(() => {
     try { return JSON.stringify(exportPayload, null, 2); } catch { return '// Failed to stringify export payload'; }
@@ -697,13 +714,9 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
                   <input type="checkbox" checked={!!filterSetOnly} onChange={(e) => setFilterSetOnly(e.target.checked)} />
                   Set items only
                 </label>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Only show items that explicitly list this career">
-                  <input type="checkbox" checked={!!filterCareerLockedOnly} onChange={(e) => setFilterCareerLockedOnly(e.target.checked)} />
-                  Career-locked only
-                </label>
               </>
             )}
-            <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); setFilterSetOnly(false); setFilterCareerLockedOnly(false); }}>Clear</button>
+            <button onClick={() => { setFilterName(''); setFilterStat(''); setFilterRarity(''); setFilterSetOnly(false); }}>Clear</button>
             <button onClick={() => setShowJson(v => !v)}>{showJson ? 'Hide JSON' : 'Show JSON'}</button>
             {copied ? <span style={{ color: 'var(--accent-color, #2aa198)' }}>Copied</span> : null}
           </div>
@@ -748,17 +761,18 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
     const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
     const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
-    const il = Number(it?.itemLevel || it?.details?.itemLevel || 0) || null;
-    // For talismans, compute a primary stat bonus display like "+24 Willpower"
+    // For talismans, compute full stat bonuses like "+24 Willpower, +2% Magic Power"
     let talisStatText = '';
     if (isTalis) {
       const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
-      const first = (stats || []).find(s => typeof s?.value === 'number' && s.value !== 0);
-      if (first) {
-        const unit = (first?.percentage || first?.unit === '%') ? '%' : '';
-        const statName = fmt(first?.stat || first?.name || first?.type || '');
-        talisStatText = `+${first.value}${unit ? unit : ''} ${statName}`.trim();
-      }
+      const parts = (stats || [])
+        .filter(s => typeof s?.value === 'number' && s.value !== 0)
+        .map(s => {
+          const unit = (s?.percentage || s?.unit === '%') ? '%' : '';
+          const statName = fmt(s?.stat || s?.name || s?.type || '');
+          return `+${s.value}${unit ? unit : ''} ${statName}`.trim();
+        });
+      talisStatText = parts.join(', ');
     }
         return (
                   <button key={it.id} className="item-row" onClick={() => onPick(it)}>
@@ -766,8 +780,6 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
                       <img className="item-icon" src={icon} alt="" />
           <span className={`item-name ${rarityClass}`}>{it.name}</span>
           <span className="item-meta">
-  {it?.id ? <span className="meta-id">ID {String(it.id)}</span> : null}
-    {il ? <span className="meta-il">Item level {il}</span> : null}
     {isTalis && talisStatText ? <span className="meta-stat">{talisStatText}</span> : null}
           </span>
                     </span>
@@ -799,12 +811,12 @@ export default function Planner({ variant = 'grid' }) {
   const [filterStat, setFilterStat] = useState('');
   const [filterRarity, setFilterRarity] = useState('');
   const [filterSetOnly, setFilterSetOnly] = useState(false);
-  const [filterCareerLockedOnly, setFilterCareerLockedOnly] = useState(false);
+  // Career-locked filter removed; server-side filtering is authoritative
   // Stats-only and Hide vanity are now always-on for items (not talismans), so no state
   // Apply sensible defaults for item picker filters only once per session
   const [itemFilterDefaultsApplied, setItemFilterDefaultsApplied] = useState(false);
   // Remember last-used filters separately for item and talisman pickers
-  const [lastItemFilters, setLastItemFilters] = useState({ name: '', stat: '', rarity: '', setOnly: false, careerLockedOnly: false });
+  const [lastItemFilters, setLastItemFilters] = useState({ name: '', stat: '', rarity: '', setOnly: false });
   const [lastTalisFilters, setLastTalisFilters] = useState({ name: '', stat: '', rarity: '' });
   // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
@@ -825,8 +837,9 @@ export default function Planner({ variant = 'grid' }) {
     return key ? (CAREER_TO_RACE[key] || null) : null;
   }, [career]);
   // Caches to avoid refetching when slot + filters + context unchanged
-  const itemPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
-  const talisPickerCacheRef = useRef(new Map()); // key -> { items, debug, ts }
+  const itemPickerCacheRef = useRef(new Map()); // legacy caches
+  const talisPickerCacheRef = useRef(new Map()); // talisman caches (hostIlvl or rarity-based)
+  const slotBaseCacheRef = useRef(new Map()); // per-slot base caches: key -> { base, ts, inFlight? }
   // Cached totals for status indicator (unique IDs)
   const [cachedItemCount, setCachedItemCount] = useState(0);
   const [cachedTalisCount, setCachedTalisCount] = useState(0);
@@ -835,14 +848,9 @@ export default function Planner({ variant = 'grid' }) {
       const itemIds = new Set();
       const talisIds = new Set();
       try {
-        for (const v of itemPickerCacheRef.current.values()) {
-          const arr = Array.isArray(v?.base) ? v.base : (Array.isArray(v?.items) ? v.items : null);
-          if (Array.isArray(arr)) {
-            for (const n of arr) {
-              const id = String(n?.id || '');
-              if (id) itemIds.add(id);
-            }
-          }
+        for (const v of slotBaseCacheRef.current.values()) {
+          const arr = Array.isArray(v?.base) ? v.base : [];
+          for (const n of arr) { const id = String(n?.id || ''); if (id) itemIds.add(id); }
         }
       } catch {}
       try {
@@ -890,6 +898,14 @@ export default function Planner({ variant = 'grid' }) {
       const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
       const val = base ? { ...value, base } : value;
       talisPickerCacheRef.current.set(key, val);
+    } catch {}
+    recalcCacheCount();
+  };
+  const setSlotBaseCache = (key, value) => {
+    try {
+      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
+      const val = base ? { ...value, base } : value;
+      slotBaseCacheRef.current.set(key, val);
     } catch {}
     recalcCacheCount();
   };
@@ -1014,22 +1030,17 @@ export default function Planner({ variant = 'grid' }) {
     return () => { if (timer) clearInterval(timer); };
   }, []);
 
-  // Concurrency tuning for precache (configurable via env; falls back to hardwareConcurrency)
+  // Concurrency tuning for prefetchers (configurable via env; falls back to hardwareConcurrency)
   const hwc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 8;
-  const PRECACHE_ITEMS_CONC = (() => {
+  const PREFETCH_SLOT_CONC = (() => {
     const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_ITEMS_CONC) ? Number(import.meta.env.VITE_PRECACHE_ITEMS_CONC) : NaN;
     if (!Number.isNaN(v) && v > 0) return Math.floor(v);
-    return Math.min(16, Math.max(6, hwc));
+    return Math.max(4, Math.min(8, hwc));
   })();
-  const PRECACHE_ITEMS_SET_CONC = (() => {
-    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_ITEMS_SET_CONC) ? Number(import.meta.env.VITE_PRECACHE_ITEMS_SET_CONC) : NaN;
-    if (!Number.isNaN(v) && v > 0) return Math.floor(v);
-    return Math.max(4, Math.min(PRECACHE_ITEMS_CONC, Math.ceil(PRECACHE_ITEMS_CONC * 0.6)));
-  })();
-  const PRECACHE_TALIS_CONC = (() => {
+  const PREFETCH_TALIS_CONC = (() => {
     const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_TALIS_CONC) ? Number(import.meta.env.VITE_PRECACHE_TALIS_CONC) : NaN;
     if (!Number.isNaN(v) && v > 0) return Math.floor(v);
-    return Math.max(3, Math.floor(PRECACHE_ITEMS_CONC / 2));
+    return Math.max(2, Math.floor(PREFETCH_SLOT_CONC / 2));
   })();
 
   // Narrow precache bands around current CR/RR (env overrideable)
@@ -1043,133 +1054,109 @@ export default function Planner({ variant = 'grid' }) {
     if (!Number.isNaN(v) && v >= 0) return Math.floor(v);
     return 10; // default: within 10 RR below current RR
   })();
-  const PRECACHE_TALIS_CR_BELOW = (() => {
-    const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_TALIS_CR_BELOW) ? Number(import.meta.env.VITE_PRECACHE_TALIS_CR_BELOW) : NaN;
-    if (!Number.isNaN(v) && v >= 0) return Math.floor(v);
-    return 12; // default: talismans within 12 CR below current CR
-  })();
-
-  // Precaching: warm global item bases per rarity (career-scoped) and talisman bases per rarity
+  // Per-slot prefetchers: top 25 by item level per slot for the active career
   useEffect(() => {
-  let cancelled = false;
-  // Avoid precaching while a picker is open to reduce contention
-  if (!career || pickerOpen) return;
-  // Small delay to prioritize user's first paint
-  let startTimer = null;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const run = async () => {
-      try {
-  // Mark precache activity starting
-  incPrecache();
-    // Warm GraphQL career enums to avoid early round-trips during mapping
-    try { warmCareerEnums(); } catch {}
-        const defaultOrder = [ { itemLevel: 'DESC' }, { rarity: 'DESC' } ];
-        const careerEnum = await mapCareerEnumDynamic(career);
-        // Helpers to filter out vanity and non-stat items
-        const hasStats = (it) => {
-          const armor = typeof it?.armor === 'number' ? it.armor : (typeof it?.details?.armor === 'number' ? it.details.armor : null);
-          const dps = typeof it?.dps === 'number' ? it.dps : (typeof it?.details?.dps === 'number' ? it.details.dps : null);
-          const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
-          return (typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0);
-        };
-        const isVanity = (it) => {
-          const typeUp = String(it?.type || it?.details?.type || '').toUpperCase();
-          const slotRaw = String(it?.slotRaw || it?.slot || '').toUpperCase();
-          if (slotRaw.startsWith('TROPHY')) return true;
-          return typeUp === 'NONE' || slotRaw === 'NONE';
-        };
-        // Global per-rarity warm-up (career-scoped, CR/RR banded)
-    const warmItemsByRarity = async (rarityVal) => {
-          const key = JSON.stringify({ picker: 'item-global', rarity: String(rarityVal || ''), career, careerRank, renownRank, defaultMode: true });
-          if (itemPickerCacheRef.current.has(key)) return;
-          const byId = new Map();
-          try {
-            const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 2000, allowAnyName: true, rarityEq: rarityVal, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
-            for (const it of (arr || [])) byId.set(String(it.id), it);
-          } catch {}
-          // Build base: stats-only, non-vanity, within CR/RR band
-          const base = Array.from(byId.values())
-            .filter((n) => hasStats(n) && !isVanity(n))
-            .filter((n) => {
-      const reqLvlNum = Number(n?.levelRequirement || n?.details?.levelRequirement || 0);
-      const reqRRNum = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || 0);
-      // Limit scope: items should be no lower than 10 less than selected CR/RR
-      const withinLvl = !reqLvlNum ? true : ((careerRank - reqLvlNum) >= 0 && (careerRank - reqLvlNum) <= 10);
-      const withinRR = !reqRRNum ? true : ((renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= 10);
-              return withinLvl && withinRR;
-            })
-            .sort((a,b) => {
-              const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
-              const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
-              if (ilA !== ilB) return ilB - ilA;
-              const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
-              const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
-              const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
-              return rb - ra;
-            });
-          if (!cancelled) setItemCache(key, { base, ts: Date.now() });
-        };
-    // Process warm-ups with tuned concurrency (one worker per rarity bucket)
-  const runQueue = async (tasks, limit = PRECACHE_ITEMS_CONC) => {
-          let i = 0;
-          const workers = new Array(Math.max(1, limit)).fill(0).map(async () => {
-            while (!cancelled && i < tasks.length) {
-              const idx = i++;
-              try { await tasks[idx](); } catch {}
-      await sleep(0);
-            }
-          });
-          await Promise.all(workers);
-        };
-        // Warm a talisman base list for given rarity (stats-only)
-        const warmTalisBase = async (rarityVal = '') => {
-          // Cache talisman bases by rarity only; UI filters will be applied at recomposition time
-          const talisBaseKey = JSON.stringify({ picker: 'talis-base', rarity: String(rarityVal || '') });
-          if (talisPickerCacheRef.current.has(talisBaseKey)) return;
-          const byId = new Map();
-          // Merge across known type aliases and slot NONE; apply server rarity filter when provided
-          const args = (extra) => ({ perPage: 50, totalLimit: 2000, ...(rarityVal ? { rarityEq: rarityVal } : {}), ...extra });
-          try { const arr = await fetchItems(args({ typeEq: 'ENHANCEMENT' })); for (const n of (arr||[])) byId.set(String(n.id), n); } catch {}
-          if (cancelled) return;
-          try { const arr = await fetchItems(args({ typeEq: 'ENCHANTMENT' })); for (const n of (arr||[])) byId.set(String(n.id), n); } catch {}
-          if (cancelled) return;
-          try { const arr = await fetchItems(args({ typeEq: 'TALISMAN' })); for (const n of (arr||[])) byId.set(String(n.id), n); } catch {}
-          if (cancelled) return;
-          try { const arr = await fetchItems(args({ slotEq: 'NONE' })); for (const n of (arr||[])) byId.set(String(n.id), n); } catch {}
-          const base = Array.from(byId.values())
-            // Only keep talismans that actually have stats
-            .filter((n) => {
-              const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
-              return Array.isArray(stats) && stats.length > 0;
-            })
-            .sort((a,b) => {
-            const ilA = Number(a?.itemLevel || a?.levelRequirement || a?.details?.itemLevel || a?.details?.levelRequirement || 0);
-            const ilB = Number(b?.itemLevel || b?.levelRequirement || b?.details?.itemLevel || b?.details?.levelRequirement || 0);
-            if (ilA !== ilB) return ilB - ilA;
-            const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
-            const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
-            const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
-            return rb - ra;
-          });
-          if (!cancelled) setTalisCache(talisBaseKey, { base, ts: Date.now() });
-        };
-        // Warm item global bases per rarity
-        const itemTasks = RARITIES.map((r) => () => warmItemsByRarity(r));
-        await runQueue(itemTasks, Math.min(RARITIES.length, PRECACHE_ITEMS_CONC));
-        // Initial batch done
-        decPrecache();
-        // Warm talisman bases per rarity shortly after
-        setTimeout(() => {
-          if (cancelled) return;
-          incPrecache();
-          const talisTasks = RARITIES.map(r => () => warmTalisBase(r));
-          runQueue(talisTasks, Math.min(RARITIES.length, PRECACHE_TALIS_CONC)).catch(() => {}).finally(() => { decPrecache(); });
-        }, 200);
-      } catch {}
+    let cancelled = false;
+    if (!career || pickerOpen) return;
+    let startTimer = null;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const runQueue = async (tasks, limit = PREFETCH_SLOT_CONC) => {
+      let i = 0;
+      const workers = new Array(Math.max(1, limit)).fill(0).map(async () => {
+        while (!cancelled && i < tasks.length) {
+          const idx = i++;
+          try { await tasks[idx](); } catch {}
+          await sleep(0);
+        }
+      });
+      await Promise.all(workers);
     };
-    startTimer = setTimeout(run, 80);
-  return () => { cancelled = true; if (startTimer) clearTimeout(startTimer); precacheOpsRef.current = 0; setIsPrecaching(false); };
-  }, [career, careerRank, renownRank, pickerOpen]);
+    const hasStats = (it) => {
+      const armor = typeof it?.armor === 'number' ? it.armor : (typeof it?.details?.armor === 'number' ? it.details.armor : null);
+      const dps = typeof it?.dps === 'number' ? it.dps : (typeof it?.details?.dps === 'number' ? it.details.dps : null);
+      const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+      return (typeof armor === 'number' && armor > 0) || (typeof dps === 'number' && dps > 0) || (Array.isArray(stats) && stats.length > 0);
+    };
+    const isVanity = (it) => {
+      const typeUp = String(it?.type || it?.details?.type || '').toUpperCase();
+      const slotRaw = String(it?.slotRaw || it?.slot || '').toUpperCase();
+      if (slotRaw.startsWith('TROPHY')) return true;
+      return typeUp === 'NONE' || slotRaw === 'NONE';
+    };
+    const friendlyToEnums = (target) => {
+      const t = (target || '').trim().toLowerCase();
+      if (t === 'helm') return ['HELM'];
+      if (t === 'shoulders') return ['SHOULDER'];
+      if (t === 'cloak') return ['BACK'];
+      if (t === 'body') return ['BODY'];
+      if (t === 'gloves') return ['GLOVES'];
+      if (t === 'belt') return ['BELT'];
+      if (t === 'boots') return ['BOOTS'];
+  // GraphQL schema EquipSlot has no TWO_HAND; two-handed weapons are represented as MAIN_HAND
+  if (t === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
+      if (t === 'off hand') return ['OFF_HAND','EITHER_HAND'];
+      if (t === 'ranged weapon') return ['RANGED_WEAPON'];
+      if (t === 'event item') return ['EVENT'];
+      if (t === 'pocket 1' || t === 'pocket 2') return ['POCKET1','POCKET2'];
+      if (/^jewelry slot (\d)$/.test(t)) {
+        const n = Number(t.slice(-1));
+        const arr = ['JEWELLERY1'];
+        if (n >= 2 && n <= 4) arr.push(`JEWELLERY${n}`);
+        return arr;
+      }
+      return [];
+    };
+  const order = [{ itemLevel: 'DESC' }];
+  const targets = slots.map(s => s.name);
+  const normKeyTarget = (s) => (String(s || '').trim().toLowerCase().replaceAll('jewellry', 'jewelry'));
+  const mkKey = (target) => JSON.stringify({ picker: 'slot-base', career, careerRank, renownRank, target: normKeyTarget(target) });
+    const careerEnumPromise = mapCareerEnumDynamic(career);
+    const prefetchOne = (target) => async () => {
+      const key = mkKey(target);
+      const hit = slotBaseCacheRef.current.get(key);
+      if (hit && Array.isArray(hit.base) && hit.base.length) return;
+      if (hit && hit.inFlight) { try { await hit.inFlight; } catch {} return; }
+      const enums = friendlyToEnums(target);
+      if (!enums.length) return;
+      const careerEnum = await careerEnumPromise;
+      const byId = new Map();
+      const run = async () => {
+        for (const sv of enums) {
+          if (cancelled) break;
+          try {
+            const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 200, slotEq: sv, allowAnyName: true, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order });
+            for (const n of (arr || [])) {
+              // race restriction enforcement; if no activeRace, safe-allow
+              const races = Array.isArray(n?.raceRestriction) ? n.raceRestriction : (Array.isArray(n?.details?.raceRestriction) ? n.details.raceRestriction : []);
+              if (Array.isArray(races) && races.length) {
+                if (activeRace && !races.map(String).map(s => s.toUpperCase()).includes(String(activeRace).toUpperCase())) continue;
+              }
+              if (!hasStats(n) || isVanity(n)) continue;
+              const reqLvlNum = Number(n?.levelRequirement || n?.details?.levelRequirement || 0);
+              const reqRRNum = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || 0);
+              if (reqLvlNum > careerRank || reqRRNum > renownRank) continue;
+              byId.set(String(n.id), n);
+              if (byId.size >= 25) break;
+            }
+          } catch {}
+          if (byId.size >= 25) break;
+        }
+        return Array.from(byId.values()).sort(sortByLevelRarity).slice(0, 25);
+      };
+      const p = run().then((base) => { setSlotBaseCache(key, { base, ts: Date.now(), inFlight: null }); }).catch(() => {});
+      setSlotBaseCache(key, { base: hit?.base || [], ts: hit?.ts || 0, inFlight: p });
+      await p;
+    };
+    incPrecache();
+    startTimer = setTimeout(async () => {
+      try {
+        try { warmCareerEnums(); } catch {}
+        const tasks = targets.map(t => prefetchOne(t));
+        await runQueue(tasks, PREFETCH_SLOT_CONC);
+      } finally { decPrecache(); }
+    }, 120);
+    return () => { cancelled = true; if (startTimer) clearTimeout(startTimer); };
+  }, [career, careerRank, renownRank, pickerOpen, activeRace]);
 
   const filteredItems = useMemo(() => {
     if (!pickerSlot) return [];
@@ -1404,7 +1391,7 @@ export default function Planner({ variant = 'grid' }) {
       if (pickerIsTalis) {
         setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
       } else {
-        setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly, careerLockedOnly: filterCareerLockedOnly });
+        setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
       }
       setPickerOpen(false);
       setPickerIsTalis(false);
@@ -1417,12 +1404,53 @@ export default function Planner({ variant = 'grid' }) {
     setPickerSlot(`Talisman ${i + 1}`);
   // Ensure no stale item results leak into talisman picker
   setPickerItems([]);
+  // Prefetch talismans keyed by host item level for fast filtering
+  try {
+    const hostItem = equipped[hostSlotName];
+    const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
+    if (hostIlvl) {
+      const talisKey = JSON.stringify({ picker: 'talis-host', hostIlvl });
+      const hit = talisPickerCacheRef.current.get(talisKey);
+      if (!hit || !Array.isArray(hit.base) || hit.base.length === 0) {
+        setPickerLoading(true);
+        // Fire and store an in-flight promise so the picker can await it
+        const p = (async () => {
+          incPrecache();
+          try {
+            const rarList = ['UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+            const byId = new Map();
+            for (const rar of rarList) {
+              try {
+                const arr = await fetchItems({ perPage: 50, totalLimit: 500, rarityEq: rar, allowAnyName: true, typeEq: 'ENHANCEMENT', order: [{ itemLevel: 'DESC' }] });
+                for (const n of (arr || [])) byId.set(String(n.id), n);
+              } catch {}
+            }
+            const base = Array.from(byId.values())
+              .filter((n) => {
+                const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
+                if (!Array.isArray(stats) || stats.length === 0) return false;
+                const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
+                if (tMin && hostIlvl && tMin > hostIlvl) return false;
+                return true;
+              })
+              .sort(sortByLevelRarity)
+              .slice(0, 50);
+            setTalisCache(talisKey, { base, ts: Date.now(), inFlight: null });
+          } finally {
+            decPrecache();
+          }
+        })();
+        // set the inFlight marker immediately
+        setTalisCache(talisKey, { base: hit?.base || [], ts: hit?.ts || 0, inFlight: p });
+      }
+    }
+  } catch {}
   // Decide loading state based on cache availability for the to-be-restored filters
   const rarityKey = String(lastTalisFilters.rarity || '');
   const keyExact = JSON.stringify({ picker: 'talis-base', rarity: rarityKey });
   const keyAll = JSON.stringify({ picker: 'talis-base', rarity: '' });
   const hasCached = talisPickerCacheRef.current.has(keyExact) || talisPickerCacheRef.current.has(keyAll);
-  setPickerLoading(!hasCached);
+  if (!hasCached) setPickerLoading(true);
     // Restore last talisman filters
     setFilterName(lastTalisFilters.name || '');
     setFilterStat(lastTalisFilters.stat || '');
@@ -1443,6 +1471,12 @@ export default function Planner({ variant = 'grid' }) {
     let ignore = false;
   async function loadFromGraphQL() {
       if (!pickerOpen || !pickerSlot) return;
+      if (!career) {
+        setPickerItems([]);
+        setPickerLoading(false);
+        setPickerDebug({ slotName: pickerSlot, isTalis: !!pickerIsTalis, notes: ['no-career-selected'] });
+        return;
+      }
   // Live GraphQL enabled even on GitHub Pages; ensure endpoint allows CORS
       try {
         // Collect debug context for export
@@ -1452,7 +1486,7 @@ export default function Planner({ variant = 'grid' }) {
           renownRank,
           slotName: pickerSlot,
           isTalis: !!pickerIsTalis,
-          filters: { name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly, careerLockedOnly: filterCareerLockedOnly },
+          filters: { name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly },
           slotVariants: [],
           requests: [],
           notes: [],
@@ -1486,7 +1520,7 @@ export default function Planner({ variant = 'grid' }) {
   const target = normalize(pickerSlot);
         const isJewelryTarget = jewelrySlots.includes(target);
         // Precompute slot variants and friendly slot label helpers before any cache derivation
-        const slotVariants = (() => {
+  const slotVariants = (() => {
           if (target === 'helm') return ['HELM'];
           if (target === 'shoulders') return ['SHOULDER'];
           if (target === 'cloak') return ['BACK'];
@@ -1543,6 +1577,58 @@ export default function Planner({ variant = 'grid' }) {
           const hostAllowsLegendary = /legendary\s+talisman/.test(hostDesc);
           // Base cache key for talisman picker: keyed by rarity only (UI name/stat applied later)
           const rarityKey = String(filterRarity || '');
+          const hostKey = JSON.stringify({ picker: 'talis-host', hostIlvl });
+          let talisHostHit = hostIlvl ? talisPickerCacheRef.current.get(hostKey) : null;
+          // If host cache is missing or empty, briefly wait for the in-flight prefetch to complete
+          if (!talisHostHit || !Array.isArray(talisHostHit.base) || talisHostHit.base.length === 0) {
+            const start = Date.now();
+            // Show loading spinner while we wait
+            setPickerLoading(true);
+            while (!ignore && Date.now() - start < 1800) {
+              const cur = talisPickerCacheRef.current.get(hostKey);
+              if (Array.isArray(cur?.base) && cur.base.length > 0) { talisHostHit = cur; break; }
+              if (cur?.inFlight && typeof cur.inFlight.then === 'function') {
+                try { await cur.inFlight; } catch {}
+              } else {
+                await new Promise(r => setTimeout(r, 100));
+              }
+            }
+          }
+          if (talisHostHit && Array.isArray(talisHostHit.base)) {
+            const base = talisHostHit.base;
+            let final = base
+              .filter((n) => {
+                if (filterName && !String(n?.name || '').toLowerCase().includes(String(filterName).toLowerCase())) return false;
+                if (filterStat) {
+                  const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
+                  const has = stats.some(s => String(s?.stat || s?.name || s?.type || '').toLowerCase().includes(String(filterStat).toLowerCase()));
+                  if (!has) return false;
+                }
+                if (rarityKey) {
+                  const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
+                  if (r !== rarityKey.toUpperCase()) return false;
+                }
+                return true;
+              })
+              .filter((n) => {
+                if (hostIlvl) {
+                  const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
+                  if (tMin && tMin > hostIlvl) return false;
+                }
+                const isLegendaryTalis = String(n?.rarity || n?.details?.rarity || '').toUpperCase() === 'MYTHIC';
+                if (isLegendaryTalis && !hostAllowsLegendary) return false;
+                const idStr = String(n?.id || '');
+                if (!idStr || excludeIds.has(idStr)) return false;
+                return true;
+              })
+              .sort(sortByLevelRarity);
+            if (!ignore) {
+              setPickerItems(final);
+              setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'talis-host-cache-hit'], final: { finalCount: final.length } });
+              setPickerLoading(false);
+            }
+            return;
+          }
           const keyExact = JSON.stringify({ picker: 'talis-base', rarity: rarityKey });
           const keyAll = JSON.stringify({ picker: 'talis-base', rarity: '' });
           let talisBaseHit = talisPickerCacheRef.current.get(keyExact) || (rarityKey ? talisPickerCacheRef.current.get(keyAll) : talisPickerCacheRef.current.get(keyAll));
@@ -1593,6 +1679,7 @@ export default function Planner({ variant = 'grid' }) {
           }
           // No cache available; only proceed to fetch for named searches
           if (!filterName) {
+            // Keep UI responsive: if we got here, host cache didn't arrive in time
             setPickerLoading(false);
             setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'talis-cache-miss-no-name'] });
             return;
@@ -1736,99 +1823,63 @@ export default function Planner({ variant = 'grid' }) {
           name: filterName || '', stat: filterStat || '', rarity: filterRarity || '',
           setOnly: !!filterSetOnly, defaultMode: !!defaultMode
         });
-        const itemBaseHit = itemPickerCacheRef.current.get(itemBaseKey);
-        if (itemBaseHit && Array.isArray(itemBaseHit.base)) {
-          // Reapply unique-equips filtering against current equipped and client-only toggles (careerLockedOnly)
-          const base = itemBaseHit.base;
+        // Try per-slot base cache first (prefetched or seeded previously)
+        const slotKey = JSON.stringify({ picker: 'slot-base', career, careerRank, renownRank, target });
+        let slotHit = slotBaseCacheRef.current.get(slotKey);
+        if (slotHit && Array.isArray(slotHit.base) && !filterName) {
+          const base = slotHit.base;
           const equippedEntries = Object.entries(equipped || {});
           const uniqueIsEquippedElsewhere = (id) => equippedEntries.some(([slotName, it]) => it && String(it.id) === String(id) && slotName !== pickerSlot);
           let items = base
             .filter((n) => !(n?.uniqueEquipped && uniqueIsEquippedElsewhere(n.id)))
             // Enforce race restriction if present
-            .filter((n) => matchesRace(n))
-            .filter((n) => {
-              if (!filterCareerLockedOnly) return true;
-              return Array.isArray(n.careerRestriction) && n.careerRestriction.length
-                ? n.careerRestriction.includes(mapCareerEnum(career))
-                : false;
-            });
+            .filter((n) => matchesRace(n));
           if (!ignore) {
             setPickerItems(items);
-            setPickerDebug({ ...debug, cached: true, final: { finalCount: items.length } });
-            if (!filterName) setPickerLoading(false);
+            setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'slot-base-cache-hit'], final: { finalCount: items.length } });
+            setPickerLoading(false);
           }
-          // For name searches, seed from cache but continue to server to merge more hits
-          if (!filterName) return;
+          return;
         }
-        // Try deriving from global per-rarity caches (career-scoped) before fetching
-        const raritiesWanted = filterRarity ? [String(filterRarity).toUpperCase()] : RARITIES.slice();
-        const globalBases = [];
-        for (const rar of raritiesWanted) {
-          const gkey = JSON.stringify({ picker: 'item-global', rarity: String(rar || ''), career, careerRank, renownRank, defaultMode: true });
-          const hit = itemPickerCacheRef.current.get(gkey);
-          if (hit && Array.isArray(hit.base)) globalBases.push(hit.base);
-        }
-        if (globalBases.length) {
-          const merged = [].concat(...globalBases);
-          const byId = new Map();
-          for (const n of merged) byId.set(String(n.id), n);
-          const itemsPre = Array.from(byId.values())
-            .map((n) => ({ ...n, slotRaw: n.slot, slot: friendlySlot(n.slot) }));
-          const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
-      let items = itemsPre
-            .filter((n) => {
-              const ns = normalize(String(n.slot || ''));
-              const raw = String(n.slotRaw || '').toUpperCase();
-              if (isJewelryTarget && targetJewNum >= 1 && targetJewNum <= 4) {
-                return raw === 'JEWELLERY1' || ns === `jewelry slot ${targetJewNum}`;
-              }
-              const allowed = new Set(slotVariants);
-              if (target === 'main hand') allowed.add('TWO_HAND');
-              const rawMatch = allowed.has(raw);
-              return acceptable.includes(ns) || rawMatch;
-            })
-            .filter((n) => {
-              // Name/stat/rarity UI filters
-              if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
-              if (filterStat) {
-                const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
-                const has = stats.some(s => String(s?.stat || s?.name || s?.type || '').toLowerCase().includes(String(filterStat).toLowerCase()));
-                if (!has) return false;
-              }
-              if (filterRarity) {
-                const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
-                if (r !== String(filterRarity).toUpperCase()) return false;
-              }
-        // Enforce race restrictions if present
-        if (!matchesRace(n)) return false;
-              return true;
-            })
-            .sort((a,b) => {
-              const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
-              const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
-              if (ilA !== ilB) return ilB - ilA;
-              const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
-              const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
-              const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
-              return (rb - ra);
-            });
-          const equippedEntries = Object.entries(equipped || {});
-          const uniqueIsEquippedElsewhere = (id) => equippedEntries.some(([slotName, it]) => it && String(it.id) === String(id) && slotName !== pickerSlot);
-          const itemsPreUnique = items.slice();
-          items = items.filter((n) => !(n?.uniqueEquipped && uniqueIsEquippedElsewhere(n.id)));
-          if (!ignore && items.length) {
-            setPickerItems(items);
-            setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'item-global-cache-derived'], final: { finalCount: items.length } });
-            if (!filterName) setPickerLoading(false);
-            // Store a slot-specific base for quicker reuse next time
-            setItemCache(itemBaseKey, { base: itemsPreUnique, ts: Date.now() });
-            if (!filterName) return; // for name search, keep going to merge more from server
-          }
-        }
-        // If no name filter and nothing cached/derived, stay cache-only (don't fetch)
+        // If no name filter and nothing cached, wait briefly for prefetch to land (or an inFlight to resolve)
         if (!filterName) {
-          setPickerLoading(false);
-          setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'cache-only-no-name'] });
+          // If a prefetch is in-flight for this slot, await it once
+          if (slotHit && slotHit.inFlight && typeof slotHit.inFlight.then === 'function') {
+            try {
+              setPickerLoading(true);
+              await slotHit.inFlight;
+              slotHit = slotBaseCacheRef.current.get(slotKey);
+            } catch { /* fall through */ }
+          }
+          // If still no base, poll up to ~2s for the cache to fill
+          if (!slotHit || !Array.isArray(slotHit.base) || slotHit.base.length === 0) {
+            setPickerLoading(true);
+            const t0 = Date.now();
+            while (!ignore && Date.now() - t0 < 2000) {
+              await new Promise(r => setTimeout(r, 100));
+              slotHit = slotBaseCacheRef.current.get(slotKey);
+              if (slotHit && Array.isArray(slotHit.base) && slotHit.base.length) break;
+            }
+          }
+          if (slotHit && Array.isArray(slotHit.base) && slotHit.base.length) {
+            const base = slotHit.base;
+            const equippedEntries = Object.entries(equipped || {});
+            const uniqueIsEquippedElsewhere = (id) => equippedEntries.some(([slotName, it]) => it && String(it.id) === String(id) && slotName !== pickerSlot);
+            let items = base
+              .filter((n) => !(n?.uniqueEquipped && uniqueIsEquippedElsewhere(n.id)))
+              .filter((n) => matchesRace(n));
+            if (!ignore) {
+              setPickerItems(items);
+              setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'slot-base-cache-waited'], final: { finalCount: items.length } });
+              setPickerLoading(false);
+            }
+            return;
+          }
+          // Fall back to empty if cache didn’t arrive in time
+          if (!ignore) {
+            setPickerLoading(false);
+            setPickerDebug({ ...debug, cached: true, notes: [...(debug.notes||[]), 'cache-wait-timeout-no-name'] });
+          }
           return;
         }
         // Start loading only if not served from cache
@@ -1869,7 +1920,7 @@ export default function Planner({ variant = 'grid' }) {
             } catch {}
           }
         } else {
-          // Ask server for exact slot
+    // Ask server for exact slot (name search only); base lists should come from slot prefetch
           const slotEnum = (() => {
             if (target === 'helm') return 'HELM';
             if (target === 'shoulders') return 'SHOULDER';
@@ -1927,7 +1978,7 @@ export default function Planner({ variant = 'grid' }) {
         const targetJewNum = isJewelryTarget ? Number((target.match(/(\d)$/) || [])[1] || 0) : 0;
         const itemsPre = (itemsRawCareer || [])
           .map((n) => ({ ...n, slotRaw: n.slot, slot: friendlySlot(n.slot) }));
-    let items = itemsPre
+  let items = itemsPre
           .filter((n) => {
             const ns = normalize(String(n.slot || ''));
             const raw = String(n.slotRaw || '').toUpperCase();
@@ -1937,7 +1988,7 @@ export default function Planner({ variant = 'grid' }) {
             }
             // For non-jewelry slots, require exact mapping or exact raw enum
             const allowed = new Set(slotVariants);
-            if (target === 'main hand') allowed.add('TWO_HAND');
+            // No TWO_HAND in schema; two-handed weapons are represented as MAIN_HAND
             const rawMatch = allowed.has(raw);
             return acceptable.includes(ns) || rawMatch;
           })
@@ -1953,18 +2004,16 @@ export default function Planner({ variant = 'grid' }) {
               const withinRR = !reqRRNum || (renownRank - reqRRNum) >= 0 && (renownRank - reqRRNum) <= PRECACHE_RR_BELOW;
               if (!withinLvl || !withinRR) return false;
             }
-            // Name filter
+            // UI filters: name/stat/rarity
             if (filterName && !String(n.name || '').toLowerCase().includes(filterName.toLowerCase())) return false;
-            // Stat presence filter
             if (filterStat) {
-              const stats = n?.stats || [];
-              const has = stats.some(s => String(s?.stat || '').toLowerCase().includes(filterStat.toLowerCase()));
+              const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
+              const has = stats.some(s => String(s?.stat || s?.name || s?.type || '').toLowerCase().includes(filterStat.toLowerCase()));
               if (!has) return false;
             }
-            // Rarity filter
             if (filterRarity) {
-              const r = String(n?.rarity || '').toUpperCase();
-              if (r !== filterRarity) return false;
+              const r = String(n?.rarity || n?.details?.rarity || '').toUpperCase();
+              if (r !== String(filterRarity).toUpperCase()) return false;
             }
       // Enforce race restriction if present
       if (!matchesRace(n)) return false;
@@ -2029,9 +2078,14 @@ export default function Planner({ variant = 'grid' }) {
           setPickerItems(items || []);
           const dbg = { ...debug, final: { rawCareerCount: (itemsRawCareer || []).length, finalCount: items ? items.length : 0 } };
           setPickerDebug(dbg);
-          // Store pre-uniqueness base list keyed by context; on reuse we reapply unique filtering
-          const baseToStore = itemsPreUnique || items || [];
-          setItemCache(itemBaseKey, { base: baseToStore, ts: Date.now() });
+          // Merge pre-uniqueness base into per-slot base cache for reuse
+          try {
+            const slotKey = JSON.stringify({ picker: 'slot-base', career, careerRank, renownRank, target });
+            const hit = slotBaseCacheRef.current.get(slotKey);
+            const prev = Array.isArray(hit?.base) ? hit.base : [];
+            const merged = dedupeById([...(prev || []), ...(itemsPreUnique || items || [])]).sort(sortByLevelRarity);
+            setSlotBaseCache(slotKey, { base: merged, ts: Date.now() });
+          } catch {}
         }
       } catch (e) {
   if (!ignore) setPickerError(e);
@@ -2041,7 +2095,7 @@ export default function Planner({ variant = 'grid' }) {
     }
     loadFromGraphQL();
     return () => { ignore = true; };
-  }, [pickerOpen, pickerSlot, pickerIsTalis, pickerTalisHost, talismans, career, careerRank, renownRank, equipped, filterName, filterStat, filterRarity, filterSetOnly, filterCareerLockedOnly]);
+  }, [pickerOpen, pickerSlot, pickerIsTalis, pickerTalisHost, talismans, career, careerRank, renownRank, equipped, filterName, filterStat, filterRarity, filterSetOnly]);
 
   // Aggregate primary stats from equipped items and applicable set bonuses
   const totals = useMemo(() => {
@@ -2464,14 +2518,13 @@ export default function Planner({ variant = 'grid' }) {
           setPickerIsTalis(false);
           setPickerTalisHost({ slotName: '', index: 0 });
           // Restore last item filters; no default checkboxes active now
-          const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly && !lastItemFilters.careerLockedOnly;
+          const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly;
           if (!itemFilterDefaultsApplied && isPristine) {
-            const defaults = { name: '', stat: '', rarity: '', setOnly: false, careerLockedOnly: false };
+            const defaults = { name: '', stat: '', rarity: '', setOnly: false };
             setFilterName('');
             setFilterStat('');
             setFilterRarity('');
             setFilterSetOnly(false);
-            setFilterCareerLockedOnly(false);
             setLastItemFilters(defaults);
             setItemFilterDefaultsApplied(true);
           } else {
@@ -2479,7 +2532,6 @@ export default function Planner({ variant = 'grid' }) {
             setFilterStat(lastItemFilters.stat || '');
             setFilterRarity(lastItemFilters.rarity || '');
             setFilterSetOnly(!!lastItemFilters.setOnly);
-            setFilterCareerLockedOnly(!!lastItemFilters.careerLockedOnly);
           }
           setPickerSlot(el.getAttribute('data-slotname'));
           setPickerOpen(true);
@@ -2504,7 +2556,7 @@ export default function Planner({ variant = 'grid' }) {
           if (pickerIsTalis) {
             setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
           } else {
-            setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly, careerLockedOnly: filterCareerLockedOnly });
+            setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
           }
           setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 });
         }}
@@ -2521,8 +2573,6 @@ export default function Planner({ variant = 'grid' }) {
   setFilterRarity={setFilterRarity}
   filterSetOnly={filterSetOnly}
   setFilterSetOnly={setFilterSetOnly}
-  filterCareerLockedOnly={filterCareerLockedOnly}
-  setFilterCareerLockedOnly={setFilterCareerLockedOnly}
   isTalis={pickerIsTalis}
   activeCareer={career}
   debugInfo={pickerDebug}
@@ -2546,14 +2596,13 @@ export default function Planner({ variant = 'grid' }) {
             setPickerItems([]);
             setPickerIsTalis(false);
             setPickerTalisHost({ slotName: '', index: 0 });
-            const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly && !lastItemFilters.careerLockedOnly;
+            const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly;
             if (!itemFilterDefaultsApplied && isPristine) {
-              const defaults = { name: '', stat: '', rarity: '', setOnly: false, careerLockedOnly: false };
+              const defaults = { name: '', stat: '', rarity: '', setOnly: false };
               setFilterName('');
               setFilterStat('');
               setFilterRarity('');
               setFilterSetOnly(false);
-              setFilterCareerLockedOnly(false);
               setLastItemFilters(defaults);
               setItemFilterDefaultsApplied(true);
             } else {
@@ -2561,7 +2610,6 @@ export default function Planner({ variant = 'grid' }) {
               setFilterStat(lastItemFilters.stat || '');
               setFilterRarity(lastItemFilters.rarity || '');
               setFilterSetOnly(!!lastItemFilters.setOnly);
-              setFilterCareerLockedOnly(!!lastItemFilters.careerLockedOnly);
             }
             setPickerSlot(el.getAttribute('data-slotname'));
             setPickerOpen(true);
@@ -2596,7 +2644,7 @@ export default function Planner({ variant = 'grid' }) {
             if (pickerIsTalis) {
               setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
             } else {
-              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly, careerLockedOnly: filterCareerLockedOnly });
+              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
             }
             setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 });
           }}
@@ -2613,8 +2661,6 @@ export default function Planner({ variant = 'grid' }) {
           setFilterRarity={setFilterRarity}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
-  filterCareerLockedOnly={filterCareerLockedOnly}
-  setFilterCareerLockedOnly={setFilterCareerLockedOnly}
           isTalis={pickerIsTalis}
       activeCareer={career}
           debugInfo={pickerDebug}
@@ -2640,14 +2686,13 @@ export default function Planner({ variant = 'grid' }) {
             setPickerItems([]);
             setPickerIsTalis(false);
             setPickerTalisHost({ slotName: '', index: 0 });
-            const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly && !lastItemFilters.careerLockedOnly;
+            const isPristine = !lastItemFilters.name && !lastItemFilters.stat && !lastItemFilters.rarity && !lastItemFilters.setOnly;
             if (!itemFilterDefaultsApplied && isPristine) {
-              const defaults = { name: '', stat: '', rarity: '', setOnly: false, careerLockedOnly: false };
+              const defaults = { name: '', stat: '', rarity: '', setOnly: false };
               setFilterName('');
               setFilterStat('');
               setFilterRarity('');
               setFilterSetOnly(false);
-              setFilterCareerLockedOnly(false);
               setLastItemFilters(defaults);
               setItemFilterDefaultsApplied(true);
             } else {
@@ -2655,7 +2700,6 @@ export default function Planner({ variant = 'grid' }) {
               setFilterStat(lastItemFilters.stat || '');
               setFilterRarity(lastItemFilters.rarity || '');
               setFilterSetOnly(!!lastItemFilters.setOnly);
-              setFilterCareerLockedOnly(!!lastItemFilters.careerLockedOnly);
             }
             setPickerSlot(el.getAttribute('data-slotname'));
             setPickerOpen(true);
@@ -2757,7 +2801,7 @@ export default function Planner({ variant = 'grid' }) {
             if (pickerIsTalis) {
               setLastTalisFilters({ name: filterName, stat: filterStat, rarity: filterRarity });
             } else {
-              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly, careerLockedOnly: filterCareerLockedOnly });
+              setLastItemFilters({ name: filterName, stat: filterStat, rarity: filterRarity, setOnly: filterSetOnly });
             }
             setPickerOpen(false); setPickerIsTalis(false); setPickerTalisHost({ slotName: '', index: 0 });
           }}
@@ -2774,8 +2818,6 @@ export default function Planner({ variant = 'grid' }) {
           setFilterRarity={setFilterRarity}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
-      filterCareerLockedOnly={filterCareerLockedOnly}
-      setFilterCareerLockedOnly={setFilterCareerLockedOnly}
           isTalis={pickerIsTalis}
       activeCareer={career}
           debugInfo={pickerDebug}
