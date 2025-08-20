@@ -2,13 +2,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import { warmCareerEnums } from './gqlClient.js'
+import schemaLoader from './schemaLoader.js'
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+async function bootstrap() {
+  // Ensure the schema is fetched from production at app start.
+  await schemaLoader.ensureSchemaLoaded();
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
 
-// Preload GraphQL Career enums in the background
-warmCareerEnums()
+bootstrap();

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchItems, fetchItemDetails, mapCareerEnum, mapCareerEnumDynamic, warmCareerEnums } from './gqlClient';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { fetchItems, fetchItemDetails, mapCareerEnum, mapCareerEnumDynamic } from './gqlClient';
+import schemaLoader from './schemaLoader';
 import './Planner.css';
-import { CAREERS, DEFAULT_CAREER, CAREER_TO_RACE, CAREER_ICON_URLS } from './config';
+import { getCareers, getDefaultCareer, getRaceForCareer, getCareerIconUrl } from './config';
 import pkg from '../package.json';
 
 const slots = [
@@ -67,7 +68,11 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
       const isSet = src.startsWith('Set:');
       const meta = sourceMeta[src] || {};
       const icon = isSet ? EMPTY_ICON : (meta.icon || EMPTY_ICON);
+      // rarityClass is applied to the tooltip card so CSS rules like
+      // .tooltip-card.rarity-rare .tooltip-name take effect.
       const rarityClass = isSet ? '' : (meta.rarityClass || '');
+  const nameClass = isSet ? 'name-set' : '';
+  const perRowRarity = isSet ? '' : (meta.rarityClass || '');
       const parts = [];
       if (e.flat) parts.push(`+${e.flat}`);
       if (e.pct) parts.push(`+${Number.isInteger(e.pct) ? e.pct : e.pct.toFixed(2)}%`);
@@ -75,19 +80,20 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
       return (
         <div key={i} className="talis-line">
           <img className="talis-icon" src={icon} alt="" />
-          <span className={`tooltip-name ${rarityClass}`}>{src}</span>
+          <span className={`tooltip-name ${perRowRarity} ${nameClass}`}>{src}</span>
           {val ? <span style={{ marginLeft: 6, opacity: 0.9 }}>{val}</span> : null}
         </div>
       );
     });
     return (
       <div className="gear-tooltip">
-        <div className="tooltip-card" role="tooltip">
+  <div className={`tooltip-card ${entries.length === 1 ? (sourceMeta[String(entries[0].source || '')]?.rarityClass || '') : ''}`} role="tooltip">
           <div className="tooltip-body" style={{ paddingTop: 6, paddingBottom: 6 }}>{rows}</div>
         </div>
       </div>
     );
   };
+  // Apply UI filters to live arrays so they match `visibleItems` behavior
   return (
     <div className="stats-panel">
       <div className="stats-lines">
@@ -160,13 +166,35 @@ function StatsPanel({ totals, activeSetBonuses, defenseList = [], offenseList = 
 const EMPTY_ICON = "https://armory.returnofreckoning.com/item/1";
 let ICON_FALLBACKS_CACHE = null;
 
+// Default per-slot fallback icons when no item is equipped
+const DEFAULT_ICON_FALLBACKS = {
+  'main hand': 'https://armory.returnofreckoning.com/icon/6',
+  'off hand': 'https://armory.returnofreckoning.com/icon/7',
+  'ranged weapon': 'https://armory.returnofreckoning.com/icon/8',
+  'body': 'https://armory.returnofreckoning.com/icon/9',
+  'gloves': 'https://armory.returnofreckoning.com/icon/10',
+  'boots': 'https://armory.returnofreckoning.com/icon/11',
+  'helm': 'https://armory.returnofreckoning.com/icon/12',
+  'shoulders': 'https://armory.returnofreckoning.com/icon/13',
+  'cloak': 'https://armory.returnofreckoning.com/icon/16',
+  'belt': 'https://armory.returnofreckoning.com/icon/17',
+  'jewelry slot 1': 'https://armory.returnofreckoning.com/icon/20',
+  'jewelry slot 2': 'https://armory.returnofreckoning.com/icon/20',
+  'jewelry slot 3': 'https://armory.returnofreckoning.com/icon/20',
+  'jewelry slot 4': 'https://armory.returnofreckoning.com/icon/20',
+  'event item': 'https://armory.returnofreckoning.com/icon/20',
+  'pocket 1': 'https://armory.returnofreckoning.com/icon/36',
+  'pocket 2': 'https://armory.returnofreckoning.com/icon/36',
+  'trophy': 'https://armory.returnofreckoning.com/icon/37'
+};
+
 function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'grid', talisCount = 0, talismans = [], onTalisPick, onTalisClear, onItemClear }) {
   const tipClass = `gear-tooltip`;
   const formatTitle = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const buildEmptyGearTooltip = () => (
     <div className={`tooltip-card`} role="tooltip">
       <div className="tooltip-header">
-        <img className="tooltip-icon" src={'https://armory.returnofreckoning.com/item/1'} alt="" />
+  <img className="tooltip-icon" src={iconFallbacks?.[(name || '').trim().toLowerCase()] || EMPTY_ICON} alt="" />
         <div>
           <div className="tooltip-name">Empty Slot</div>
         </div>
@@ -179,7 +207,7 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   const buildEmptyTalisTooltip = () => (
     <div className={`tooltip-card`} role="tooltip">
       <div className="tooltip-header">
-        <img className="tooltip-icon" src={'https://armory.returnofreckoning.com/item/1'} alt="" />
+  <img className="tooltip-icon" src={iconFallbacks?.[(name || '').trim().toLowerCase()] || EMPTY_ICON} alt="" />
         <div>
           <div className="tooltip-name">Empty Talisman Slot</div>
         </div>
@@ -526,17 +554,33 @@ function GearSlot({ name, gridArea, item, allItems, iconFallbacks, variant = 'gr
   );
 }
 
-function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly, isTalis = false, activeCareer, debugInfo = null }) {
+function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, filterName, setFilterName, filterStat, setFilterStat, filterRarity, setFilterRarity, filterSetOnly, setFilterSetOnly, isTalis = false, activeCareer, debugInfo = null, careerRank = 0, renownRank = 0 }) {
   if (!open) return null;
+  // Normalize naming: internal code historically referenced `career` instead of `activeCareer`
+  const career = activeCareer;
   const fmt = (s) => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   const [copied, setCopied] = useState(false);
   const [showJson, setShowJson] = useState(false);
-  const isLoading = !!loading;
+  // Track when we've actually sent a query and are waiting for results
+  const [isQuerying, setIsQuerying] = useState(false);
+  const isLoading = !!isQuerying;
   const statOptions = useMemo(() => {
+    // Try to read Stat enum from runtime schema introspection
+    try {
+      const enums = schemaLoader.getEnumValues('Stat') || [];
+      if (Array.isArray(enums) && enums.length) {
+        return enums.map(v => ({ value: v, label: String(v || '').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }));
+      }
+    } catch (e) {}
+    // Fallback: use local stat order lists and convert to enum-like values
     const all = [...statOrder, ...defenseOrder, ...offenseOrder, ...magicOrder];
     const seen = new Set();
     const out = [];
-    for (const s of all) { const k = String(s); if (!seen.has(k)) { seen.add(k); out.push(k); } }
+    for (const s of all) {
+      const label = String(s || '');
+      const value = String(label || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+      if (!seen.has(value)) { seen.add(value); out.push({ value, label }); }
+    }
     return out;
   }, []);
   // Helper checks for filters
@@ -564,8 +608,14 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
     const statMatches = (it, needle) => {
       if (!needle) return true;
       const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
-      const q = lc(needle);
-      return stats.some(s => lc(s?.stat || s?.name || s?.type || '').includes(q));
+      // needle is expected to be the enum name (e.g., WILLPOWER)
+      return stats.some(s => {
+        if (!s) return false;
+        if (s?.stat && String(s.stat) === String(needle)) return true;
+        // fallback: compare normalized stat name strings
+        const n = String(s?.stat || s?.name || s?.type || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+        return n === String(needle).trim().toUpperCase();
+      });
     };
     const rarityMatches = (it, wanted) => {
       if (!wanted) return true;
@@ -595,6 +645,42 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
       // Always hide vanity/admin-like items for non-talisman lists
       .filter(it => isTalis ? true : !isVanity(it));
   }, [items, isTalis, filterSetOnly, filterName, filterStat, filterRarity, activeCareer]);
+  // Reusable UI filter for arrays (applies same rules as `visibleItems`)
+  function applyUiFilters(arr) {
+    if (!Array.isArray(arr)) return [];
+    const lc = (s) => String(s || '').toLowerCase();
+    const statMatches = (it, needle) => {
+      if (!needle) return true;
+      const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+      return stats.some(s => {
+        if (!s) return false;
+        if (s?.stat && String(s.stat) === String(needle)) return true;
+        const n = String(s?.stat || s?.name || s?.type || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+        return n === String(needle).trim().toUpperCase();
+      });
+    };
+    const rarityMatches = (it, wanted) => {
+      if (!wanted) return true;
+      const r = String(it?.rarity || it?.details?.rarity || '').toUpperCase();
+      return r === String(wanted).toUpperCase();
+    };
+    const nameMatches = (it, needle) => {
+      if (!needle) return true;
+      return lc(it?.name).includes(lc(needle));
+    };
+    return arr
+      .filter(it => {
+        if (isTalis || !filterSetOnly) return true;
+        const top = it?.itemSet?.name;
+        const detSet = it?.details?.set?.name || it?.details?.itemSet?.name;
+        return !!(top || detSet);
+      })
+      .filter(it => nameMatches(it, filterName))
+      .filter(it => statMatches(it, filterStat))
+      .filter(it => rarityMatches(it, filterRarity))
+      .filter(it => hasStats(it))
+      .filter(it => isTalis ? true : !isVanity(it));
+  }
   const exportQuery = useMemo(() => {
     const q = { ...(debugInfo || {}) };
     // Ensure filters reflect current UI state (server snapshot may be stale)
@@ -620,6 +706,227 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
   const exportText = useMemo(() => {
     try { return JSON.stringify(exportPayload, null, 2); } catch { return '// Failed to stringify export payload'; }
   }, [exportPayload]);
+  // Live pagination state (no-caching mode)
+  const [liveHasNext, setLiveHasNext] = useState(false);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveItems, setLiveItems] = useState([]);
+  const liveCursorsRef = useRef({}); // per-slot cursors: { SLOT_ENUM: cursor|null }
+  const [lastQuery, setLastQuery] = useState(null);
+  const [lastResponseSummary, setLastResponseSummary] = useState(null);
+  // Indicates we've attempted at least one server query for this open picker
+  const [hasQueried, setHasQueried] = useState(false);
+  // Per-open full-slot fetch + client-side paging
+  const [liveAllItems, setLiveAllItems] = useState([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const PAGE_SIZE = 10;
+
+  // Dev logging: print server/debug info and live results when picker opens
+  useEffect(() => {
+    if (!open) return;
+    try {
+      if (import.meta && import.meta.env && import.meta.env.DEV) {
+        console.debug('[ItemPicker] open', { slotName, activeCareer, debugInfo, liveCount: (liveItems || []).length });
+      }
+    } catch {}
+  }, [open, slotName, activeCareer, debugInfo, liveItems]);
+
+  const resetLive = () => {
+    liveCursorsRef.current = {};
+    setLiveItems([]);
+    setLiveHasNext(false);
+    setLiveLoading(false);
+  setHasQueried(false);
+  setIsQuerying(false);
+  };
+
+  const fetchNextLivePage = async () => {
+    // Require a selected career (UI string) before fetching pages
+    if (!career) return;
+  setLiveLoading(true);
+  setIsQuerying(true);
+    try {
+      const normalize = (s) => (s || '').trim().toLowerCase();
+      const target = normalize(slotName || '');
+      const slotVariants = (() => {
+        if (target === 'helm') return ['HELM'];
+        if (target === 'shoulders') return ['SHOULDER'];
+        if (target === 'cloak') return ['BACK'];
+        if (target === 'body') return ['BODY'];
+        if (target === 'gloves') return ['GLOVES'];
+        if (target === 'belt') return ['BELT'];
+        if (target === 'boots') return ['BOOTS'];
+        if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
+        if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
+        if (target === 'ranged weapon') return ['RANGED_WEAPON'];
+        if (target === 'event item') return ['EVENT'];
+        if (target === 'pocket 1' || target === 'pocket 2') return ['POCKET1','POCKET2'];
+        if (/^jewelry slot (\d)$/.test(target)) {
+          const n = Number(target.slice(-1));
+          const arr = ['JEWELLERY1'];
+          if (n >= 2 && n <= 4) arr.push(`JEWELLERY${n}`);
+          return arr;
+        }
+        return [];
+      })();
+          const pageSize = 10; 
+      const accum = [];
+      const seen = new Set();
+      let anyHasNext = false;
+
+      for (const sv of slotVariants) {
+        const after = liveCursorsRef.current[sv] || undefined;
+        // Build variables for debugging
+            const vars = { first: pageSize, after, slotEq: sv, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, order: [{ itemLevel: 'DESC' }] }; 
+            setLastQuery(vars);
+        if (import.meta && import.meta.env && import.meta.env.DEV) console.debug('[Picker] fetchItemsPage vars', vars, 'career=', career);
+  // Ask the server to return items usable by the selected career so results are authoritative.
+  // Include level/renown caps so server-side filtering reduces noise.
+  const res = await fetchItemsPage({ ...vars, career, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank });
+        if (import.meta && import.meta.env && import.meta.env.DEV) console.debug('[Picker] fetchItemsPage response', sv, 'nodes=', (res.nodes || []).length, (res.nodes || []).slice(0,5).map(n => n?.id));
+        for (const n of (res.nodes || [])) {
+          const id = String(n?.id || '');
+          if (!id || seen.has(id)) continue;
+          // Server returned only items usable by the selected career (or agnostic items per server logic);
+          // don't apply careerRestriction checks here so results remain authoritative from the server.
+          // Enforce career rank (levelRequirement) and renown caps client-side
+          const lvlReq = Number(n?.levelRequirement || n?.details?.levelRequirement || 0) || 0;
+          if (lvlReq && lvlReq > careerRank) continue;
+          const rrReq = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || n?.details?.renownRank || 0) || 0;
+          if (rrReq && rrReq > renownRank) continue;
+          seen.add(id);
+          accum.push(n);
+          if (accum.length >= pageSize) break;
+        }
+        if (res.pageInfo && res.pageInfo.hasNextPage) {
+          anyHasNext = true;
+          liveCursorsRef.current[sv] = res.pageInfo.endCursor || liveCursorsRef.current[sv] || null;
+        } else {
+          liveCursorsRef.current[sv] = null;
+        }
+        if (accum.length >= pageSize) break;
+      }
+
+      // Sort by itemLevel desc, then rarity order as tiebreaker
+      const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+      accum.sort((a,b) => {
+        const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
+        const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
+        if (ilA !== ilB) return ilB - ilA;
+        const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+        const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
+        return rb - ra;
+      });
+      const newItems = accum.slice(0, pageSize);
+      setLiveItems(prev => [...(Array.isArray(prev) ? prev : []), ...newItems]);
+      // anyHasNext true OR any cursor still non-null implies more pages
+      const anyCursorRemaining = Object.values(liveCursorsRef.current).some(v => v);
+      setLiveHasNext(anyHasNext || anyCursorRemaining);
+    } catch (err) {
+      // ignore
+    } finally {
+      setLiveLoading(false);
+      setIsQuerying(false);
+      setHasQueried(true);
+    }
+  };
+  // Reset live results when controlling inputs change
+  useEffect(() => {
+    resetLive();
+  }, [slotName, filterName, filterStat, filterRarity, isTalis, activeCareer]);
+
+  // Auto-fetch first page when opened
+  useEffect(() => {
+    if (open && (!liveItems || liveItems.length === 0)) {
+      // fire-and-forget
+      fetchNextLivePage();
+    }
+  }, [open]);
+
+  // When picker opens, fetch full slot list once (per-open), then compute pages
+  useEffect(() => {
+    let ignore = false;
+    async function loadFullSlot() {
+      if (!open) return;
+      // require career selected
+      if (!activeCareer) return;
+  // mark that we haven't queried yet for this open session
+  setHasQueried(false);
+  setIsQuerying(true);
+  setLiveAllItems([]);
+  setPageIndex(0);
+  setLiveLoading(true);
+      try {
+        const normalize = (s) => (s || '').trim().toLowerCase();
+        const target = normalize(slotName || '');
+        const slotVariants = (() => {
+          if (target === 'helm') return ['HELM'];
+          if (target === 'shoulders') return ['SHOULDER'];
+          if (target === 'cloak') return ['BACK'];
+          if (target === 'body') return ['BODY'];
+          if (target === 'gloves') return ['GLOVES'];
+          if (target === 'belt') return ['BELT'];
+          if (target === 'boots') return ['BOOTS'];
+          if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
+          if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
+          if (target === 'ranged weapon') return ['RANGED_WEAPON'];
+          if (target === 'event item') return ['EVENT'];
+          if (target === 'pocket 1' || target === 'pocket 2') return ['POCKET1','POCKET2'];
+          if (/^jewelry slot (\d)$/.test(target)) {
+            const n = Number(target.slice(-1));
+            const arr = ['JEWELLERY1'];
+            if (n >= 2 && n <= 4) arr.push(`JEWELLERY${n}`);
+            return arr;
+          }
+          return [];
+        })();
+        const byId = new Map();
+        const defaultOrder = [{ itemLevel: 'DESC' }];
+        for (const sv of slotVariants) {
+          try {
+            const vars = { slotEq: sv, perPage: 50, totalLimit: 1000, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, career: activeCareer, order: defaultOrder };
+            setLastQuery(vars);
+            const arr = await fetchItems({ career: activeCareer, perPage: vars.perPage, totalLimit: vars.totalLimit, slotEq: sv, allowAnyName: vars.allowAnyName, nameContains: vars.nameContains, rarityEq: vars.rarityEq, maxLevelRequirement: vars.maxLevelRequirement, maxRenownRankRequirement: vars.maxRenownRankRequirement, order: vars.order });
+            setLastResponseSummary({ slotVariant: sv, nodes: (arr || []).length });
+            for (const n of (arr || [])) byId.set(String(n.id), n);
+          } catch (e) {
+            // ignore per-variant errors
+          }
+        }
+        // Merge, filter by careerRestriction and caps, sort by itemLevel desc
+        const all = Array.from(byId.values()).filter(n => {
+          // Rely on server-side usableByCareer filtering; only enforce level/renown caps here.
+          const lvlReq = Number(n?.levelRequirement || n?.details?.levelRequirement || 0) || 0;
+          if (lvlReq && lvlReq > careerRank) return false;
+          const rrReq = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || n?.details?.renownRank || 0) || 0;
+          if (rrReq && rrReq > renownRank) return false;
+          return true;
+        }).sort((a,b) => {
+          const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
+          const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
+          if (ilA !== ilB) return ilB - ilA;
+          const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+          const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+          const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
+          return rb - ra;
+        });
+        if (!ignore) {
+          setLiveAllItems(all);
+          setPageIndex(0);
+          setLiveHasNext(all.length > PAGE_SIZE);
+        }
+      } catch (e) {
+        if (!ignore) setLiveAllItems([]);
+      } finally {
+        if (!ignore) {
+          setLiveLoading(false);
+          setIsQuerying(false);
+          setHasQueried(true);
+        }
+      }
+    }
+    loadFullSlot();
+    return () => { ignore = true; };
+  }, [open, slotName, filterName, filterRarity, activeCareer, careerRank, renownRank]);
   const renderTooltip = (it) => {
     if (!it) return null;
     const rarity = String(it.rarity || it?.details?.rarity || '').toLowerCase();
@@ -635,10 +942,11 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
           <div className="tooltip-header">
             <img className="tooltip-icon" src={icon} alt="" />
             <div>
-              <div className={`tooltip-name${it?.itemSet?.name || it?.details?.set?.name ? ' name-set' : ''}`}>{it.name}</div>
+              { (isLoading || liveLoading) && <div>Loading…</div>}
+              {error && <div style={{ color: 'crimson' }}>Failed to load items. {(error?.message || '').toString()}</div>}
             </div>
           </div>
-          <div className="tooltip-body">
+            <div className="tooltip-body">
             {(it.slot || il) && (
               <div className="tooltip-section">
                 {it.slot ? <div>{fmt(it.slot)}</div> : null}
@@ -670,11 +978,111 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
       </div>
     );
   };
+  // Apply UI filters to live arrays so they match `visibleItems` behavior
+  const displayedLiveAll = applyUiFilters(liveAllItems || []);
+  const displayedLive = applyUiFilters(liveItems || []);
+  // Ensure we have the next page loaded (one extra page) so we can determine if the current page is last
+  const ensureExtraPage = async (currentPageIndex) => {
+    try {
+      // We need at least one item beyond the end of the next page to be sure there's more.
+      const needed = (currentPageIndex + 1) * PAGE_SIZE + 1; // items required to know whether next page has any items
+      if (Array.isArray(liveAllItems) && liveAllItems.length >= needed) return;
+      if (!activeCareer) return; // can't fetch without career
+      setLiveLoading(true);
+      setIsQuerying(true);
+      const normalize = (s) => (s || '').trim().toLowerCase();
+      const target = normalize(slotName || '');
+      const slotVariants = (() => {
+        if (target === 'helm') return ['HELM'];
+        if (target === 'shoulders') return ['SHOULDER'];
+        if (target === 'cloak') return ['BACK'];
+        if (target === 'body') return ['BODY'];
+        if (target === 'gloves') return ['GLOVES'];
+        if (target === 'belt') return ['BELT'];
+        if (target === 'boots') return ['BOOTS'];
+        if (target === 'main hand') return ['MAIN_HAND','EITHER_HAND'];
+        if (target === 'off hand') return ['OFF_HAND','EITHER_HAND'];
+        if (target === 'ranged weapon') return ['RANGED_WEAPON'];
+        if (target === 'event item') return ['EVENT'];
+        if (target === 'pocket 1' || target === 'pocket 2') return ['POCKET1','POCKET2'];
+        if (/^jewelry slot (\d)$/.test(target)) {
+          const n = Number(target.slice(-1));
+          const arr = ['JEWELLERY1'];
+          if (n >= 2 && n <= 4) arr.push(`JEWELLERY${n}`);
+          return arr;
+        }
+        return [];
+      })();
+  // Start from existing map to avoid duplicates
+      const byId = new Map();
+      for (const it of Array.isArray(liveAllItems) ? liveAllItems : []) byId.set(String(it?.id || ''), it);
+      const defaultOrder = [{ itemLevel: 'DESC' }];
+      for (const sv of slotVariants) {
+        try {
+          const perPage = PAGE_SIZE;
+          const totalLimit = needed; // ask server for enough items to cover pages
+          const vars = { slotEq: sv, perPage, totalLimit, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, career: activeCareer, order: defaultOrder };
+          setLastQuery(vars);
+          const arr = await fetchItems({ career: activeCareer, perPage: vars.perPage, totalLimit: vars.totalLimit, slotEq: sv, allowAnyName: vars.allowAnyName, nameContains: vars.nameContains, rarityEq: vars.rarityEq, maxLevelRequirement: vars.maxLevelRequirement, maxRenownRankRequirement: vars.maxRenownRankRequirement, order: vars.order });
+          setLastResponseSummary({ slotVariant: sv, nodes: (arr || []).length });
+          for (const n of (arr || [])) {
+            if (!n || !n.id) continue;
+            const id = String(n.id);
+            if (!byId.has(id)) byId.set(id, n);
+          }
+        } catch (e) {
+          // ignore per-variant errors
+        }
+      }
+      const all = Array.from(byId.values()).filter(n => {
+        // Rely on server-side usableByCareer filtering; only enforce level/renown caps here.
+        const lvlReq = Number(n?.levelRequirement || n?.details?.levelRequirement || 0) || 0;
+        if (lvlReq && lvlReq > careerRank) return false;
+        const rrReq = Number(n?.renownRankRequirement || n?.details?.renownRankRequirement || n?.details?.renownRank || 0) || 0;
+        if (rrReq && rrReq > renownRank) return false;
+        return true;
+      }).sort((a,b) => {
+        const ilA = Number(a?.itemLevel || a?.details?.itemLevel || 0);
+        const ilB = Number(b?.itemLevel || b?.details?.itemLevel || 0);
+        if (ilA !== ilB) return ilB - ilA;
+        const rarOrder = ['UTILITY','COMMON','UNCOMMON','RARE','VERY_RARE','MYTHIC'];
+        const ra = rarOrder.indexOf(String(a?.rarity || a?.details?.rarity || '').toUpperCase());
+        const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
+        return rb - ra;
+      });
+      setLiveAllItems(all);
+      // There is a next page if we have more items than the end of the next page
+      const hasNext = all.length > ((currentPageIndex + 1) * PAGE_SIZE);
+      setLiveHasNext(hasNext);
+      return hasNext;
+    } catch (e) {
+      // ignore
+      return false;
+    } finally {
+      setLiveLoading(false);
+      setIsQuerying(false);
+      setHasQueried(true);
+    }
+  };
+
+  // Keep pageIndex within bounds if the source list shrinks
+  useEffect(() => {
+    try {
+      const srcLen = (displayedLiveAll && displayedLiveAll.length > 0) ? displayedLiveAll.length : ((displayedLive && displayedLive.length > 0) ? displayedLive.length : (visibleItems ? visibleItems.length : 0));
+      const maxIndex = Math.max(0, Math.floor((Math.max(0, srcLen - 1)) / PAGE_SIZE));
+      if (pageIndex > maxIndex) setPageIndex(maxIndex);
+    } catch (e) {}
+  }, [(displayedLiveAll || []).length, (displayedLive || []).length, (visibleItems || []).length]);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">Select Item for {slotName}</div>
+          <div style={{ marginLeft: 12, fontSize: 12, opacity: 0.85 }}>
+      {((displayedLiveAll && displayedLiveAll.length) || (displayedLive && displayedLive.length) || (items && items.length)) ? (
+        <span>Results: {(displayedLiveAll && displayedLiveAll.length) ? displayedLiveAll.length : ((displayedLive && displayedLive.length) ? displayedLive.length : (items ? items.length : 0))}{(liveHasNext || (displayedLiveAll && displayedLiveAll.length > PAGE_SIZE)) ? ' (more)' : ''}</span>
+  ) : null }
+          </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
@@ -692,7 +1100,7 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
             >
               <option value="">Any stat</option>
               {statOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
             <select
@@ -747,20 +1155,23 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
               />
             </div>
           )}
-          {loading && <div>Loading…</div>}
+          {isLoading && <div>Loading…</div>}
           {error && <div style={{ color: 'crimson' }}>Failed to load items. {(error?.message || '').toString()}</div>}
-          {!loading && !error && items && items.length === 0 && (
+          {!loading && !error && hasQueried && ((items && items.length === 0) && (!(displayedLive && displayedLive.length) && !(displayedLiveAll && displayedLiveAll.length))) && (
             <div>No items found.</div>
           )}
-          {!loading && !error && items && items.length > 0 && visibleItems.length === 0 && (
+          {!loading && !error && hasQueried && ((items && items.length > 0 && visibleItems.length === 0) && (!(displayedLive && displayedLive.length) && !(displayedLiveAll && displayedLiveAll.length))) && (
             <div>No items match your filters.</div>
           )}
-    {!loading && !error && items && items.length > 0 && visibleItems.length > 0 && (
+          {/* prefer liveItems when present (no-caching paginated mode), otherwise fall back to client-provided items */}
+    {!loading && !error && ((displayedLiveAll && displayedLiveAll.length > 0) || (displayedLive && displayedLive.length > 0) || (items && items.length > 0 && visibleItems.length > 0)) && (
   <div className="item-list">
-  {visibleItems.map((it) => {
+          {((displayedLiveAll && displayedLiveAll.length > 0) ? (displayedLiveAll.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE)) : (displayedLive && displayedLive.length > 0 ? displayedLive : visibleItems)).map((it) => {
                 const icon = it.iconUrl || it?.details?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
     const isSet = !!(it?.itemSet?.name || it?.details?.set?.name || it?.details?.itemSet?.name);
     const rarityClass = isSet ? 'name-set' : (String(it?.rarity || '').toLowerCase() ? `rarity-${String(it?.rarity || '').toLowerCase()}` : '');
+    // Item level
+    const itemLevel = Number(it?.itemLevel || it?.details?.itemLevel || 0) || null;
     // For talismans, compute full stat bonuses like "+24 Willpower, +2% Magic Power"
     let talisStatText = '';
     if (isTalis) {
@@ -774,22 +1185,59 @@ function ItemPicker({ open, onClose, items, slotName, onPick, loading, error, fi
         });
       talisStatText = parts.join(', ');
     }
+    // If a stat filter is active for non-talis items, try to extract that stat's value
+    let filteredStatText = '';
+    if (!isTalis && filterStat) {
+      const stats = Array.isArray(it?.stats) ? it.stats : (Array.isArray(it?.details?.stats) ? it.details.stats : []);
+      const needle = String(filterStat || '').toLowerCase();
+      for (const s of (stats || [])) {
+        const name = String(s?.stat || s?.name || s?.type || '').toLowerCase();
+        if (!name) continue;
+        if (name.includes(needle) || needle.includes(name)) {
+          const unit = (s?.percentage || s?.unit === '%') ? '%' : '';
+          const statName = fmt(s?.stat || s?.name || s?.type || '');
+          if (typeof s?.value === 'number') {
+            filteredStatText = `+${s.value}${unit ? unit : ''} ${statName}`.trim();
+          }
+          break;
+        }
+      }
+    }
         return (
                   <button key={it.id} className="item-row" onClick={() => onPick(it)}>
                     <span className="item-left">
                       <img className="item-icon" src={icon} alt="" />
           <span className={`item-name ${rarityClass}`}>{it.name}</span>
           <span className="item-meta">
+    {/* Always show item level */}
+    {itemLevel ? <span className="meta-il">IL {itemLevel}</span> : null}
+    {/* For talismans show full stat text, otherwise show filtered stat if present */}
     {isTalis && talisStatText ? <span className="meta-stat">{talisStatText}</span> : null}
+    {!isTalis && filteredStatText ? <span className="meta-stat">{filteredStatText}</span> : null}
           </span>
                     </span>
                     <span className="item-slot">{fmt(it.slot || '')}</span>
             {renderTooltip(it)}
                   </button>
                 );
-              })}
+                })}
             </div>
           )}
+              {/* Pagination controls */}
+              {(!loading && !error) && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: 8, gap: 8 }}>
+                  <button disabled={pageIndex <= 0} onClick={() => { setPageIndex(0); }}>First</button>
+                  <button disabled={pageIndex <= 0} onClick={() => { setPageIndex(p => Math.max(0, p - 1)); }}>Back</button>
+                  <span style={{ alignSelf: 'center' }}>{`Page ${pageIndex + 1}`}</span>
+                  <button disabled={!( (displayedLiveAll && ((pageIndex + 1) * PAGE_SIZE < displayedLiveAll.length)) || ((displayedLive && displayedLive.length > 0 && ((pageIndex + 1) * PAGE_SIZE < displayedLive.length))) || (visibleItems && visibleItems.length > 0 && ((pageIndex + 1) * PAGE_SIZE < visibleItems.length)) )} onClick={async () => { 
+                    // Ensure next page is loaded (fetch one extra page) so we can detect if it's the last
+                    const hasNext = await ensureExtraPage(pageIndex);
+                    // Advance page only if the source list has items for that page
+                    const srcLen = (displayedLiveAll && displayedLiveAll.length > 0) ? displayedLiveAll.length : ((displayedLive && displayedLive.length > 0) ? displayedLive.length : (visibleItems ? visibleItems.length : 0));
+                    if (hasNext || (srcLen > ((pageIndex + 1) * PAGE_SIZE))) setPageIndex(p => p + 1);
+                  }}>Next</button>
+                </div>
+              )}
         </div>
       </div>
     </div>
@@ -820,7 +1268,7 @@ export default function Planner({ variant = 'grid' }) {
   const [lastTalisFilters, setLastTalisFilters] = useState({ name: '', stat: '', rarity: '' });
   // Max caps removed; default filtering uses current Career Rank and Renown Rank
   const [equipped, setEquipped] = useState({}); // { [slotDisplayName]: item }
-  const [iconFallbacks] = useState(null); // no remote fallbacks on Pages
+  const [iconFallbacks] = useState(DEFAULT_ICON_FALLBACKS); // use per-slot fallbacks
   const [setsIndex] = useState(null); // no static sets index on Pages
   const [pickerItems, setPickerItems] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
@@ -834,40 +1282,27 @@ export default function Planner({ variant = 'grid' }) {
   // Active race resolved from selected career (used to enforce race-restricted items)
   const activeRace = useMemo(() => {
     const key = String(career || '').toUpperCase();
-    return key ? (CAREER_TO_RACE[key] || null) : null;
+    return key ? (getRaceForCareer(key) || null) : null;
   }, [career]);
-  // Caches to avoid refetching when slot + filters + context unchanged
-  const itemPickerCacheRef = useRef(new Map()); // legacy caches
-  const talisPickerCacheRef = useRef(new Map()); // talisman caches (hostIlvl or rarity-based)
-  const slotBaseCacheRef = useRef(new Map()); // per-slot base caches: key -> { base, ts, inFlight? }
-  // Cached totals for status indicator (unique IDs)
+
+  // Ensure a sensible default career is selected on first mount so pickers fetch live results
+  // NOTE: Do not auto-select a career on mount. User must choose a career explicitly before
+  // pickers may open. This prevents accidental queries and matches UX requirement.
+  // No client-side item caches: pickers fetch live from GraphQL only
+  // Keep inert refs/helpers for compatibility with older code paths (they are no-ops)
+  const itemPickerCacheRef = useRef(new Map());
+  const talisPickerCacheRef = useRef(new Map());
+  const slotBaseCacheRef = useRef(new Map());
   const [cachedItemCount, setCachedItemCount] = useState(0);
   const [cachedTalisCount, setCachedTalisCount] = useState(0);
-  const recalcCacheCount = () => {
-    try {
-      const itemIds = new Set();
-      const talisIds = new Set();
-      try {
-        for (const v of slotBaseCacheRef.current.values()) {
-          const arr = Array.isArray(v?.base) ? v.base : [];
-          for (const n of arr) { const id = String(n?.id || ''); if (id) itemIds.add(id); }
-        }
-      } catch {}
-      try {
-        for (const v of talisPickerCacheRef.current.values()) {
-          const arr = Array.isArray(v?.base) ? v.base : null;
-          if (Array.isArray(arr)) {
-            for (const n of arr) {
-              const id = String(n?.id || '');
-              if (id) talisIds.add(id);
-            }
-          }
-        }
-      } catch {}
-      setCachedItemCount(itemIds.size);
-      setCachedTalisCount(talisIds.size);
-    } catch {}
-  };
+  const recalcCacheCount = () => { try { setCachedItemCount(0); setCachedTalisCount(0); } catch {} };
+  const setItemCache = () => {};
+  const setTalisCache = () => {};
+  const setSlotBaseCache = () => {};
+  const [isPrecaching, setIsPrecaching] = useState(false);
+  const precacheOpsRef = useRef(0);
+  const incPrecache = () => {};
+  const decPrecache = () => {};
   const dedupeById = (arr) => {
     const map = new Map();
     for (const n of Array.isArray(arr) ? arr : []) {
@@ -885,39 +1320,7 @@ export default function Planner({ variant = 'grid' }) {
     const rb = rarOrder.indexOf(String(b?.rarity || b?.details?.rarity || '').toUpperCase());
     return rb - ra;
   };
-  const setItemCache = (key, value) => {
-    try {
-      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
-      const val = base ? { ...value, base } : value;
-      itemPickerCacheRef.current.set(key, val);
-    } catch {}
-    recalcCacheCount();
-  };
-  const setTalisCache = (key, value) => {
-    try {
-      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
-      const val = base ? { ...value, base } : value;
-      talisPickerCacheRef.current.set(key, val);
-    } catch {}
-    recalcCacheCount();
-  };
-  const setSlotBaseCache = (key, value) => {
-    try {
-      const base = Array.isArray(value?.base) ? dedupeById(value.base).sort(sortByLevelRarity) : value?.base;
-      const val = base ? { ...value, base } : value;
-      slotBaseCacheRef.current.set(key, val);
-    } catch {}
-    recalcCacheCount();
-  };
-  // Precache activity indicator
-  const [isPrecaching, setIsPrecaching] = useState(false);
-  const precacheOpsRef = useRef(0);
-  const incPrecache = () => { precacheOpsRef.current += 1; setIsPrecaching(true); };
-  const decPrecache = () => {
-    const v = Math.max(0, (precacheOpsRef.current || 0) - 1);
-    precacheOpsRef.current = v;
-    if (v === 0) setIsPrecaching(false);
-  };
+  // No precaching or cache indicators; live-only mode
 
   // No static item preload on Pages; rely on live GraphQL only
   // Build source metadata for stats tooltip contributions
@@ -930,14 +1333,17 @@ export default function Planner({ variant = 'grid' }) {
     };
     for (const [hostName, it] of Object.entries(equipped || {})) {
       if (!it) continue;
-      const i = it?.details?.iconUrl || it?.iconUrl || (it?.details?.iconId ? `https://armory.returnofreckoning.com/item/${it.details.iconId}` : EMPTY_ICON);
+      // Prefer the armory icon image endpoint when an iconId is available.
+      const i = (it?.details?.iconId || it?.iconId) ? `https://armory.returnofreckoning.com/icon/${it.details?.iconId || it.iconId}`
+        : (it?.details?.iconUrl || it?.iconUrl || EMPTY_ICON);
       add(it.name, i, it?.details?.rarity || it?.rarity);
       const hostTal = talismans?.[hostName] || [];
       const maxTal = Number(it?.details?.talismanSlots || 0) || 0;
       for (let idx = 0; idx < Math.min(hostTal.length, maxTal); idx++) {
         const t = hostTal[idx];
         if (!t) continue;
-        const ti = t?.details?.iconUrl || t?.iconUrl || (t?.details?.iconId ? `https://armory.returnofreckoning.com/item/${t.details.iconId}` : EMPTY_ICON);
+        const ti = (t?.details?.iconId || t?.iconId) ? `https://armory.returnofreckoning.com/icon/${t.details?.iconId || t.iconId}`
+          : (t?.details?.iconUrl || t?.iconUrl || EMPTY_ICON);
         add(t.name, ti, t?.details?.rarity || t?.rarity);
       }
     }
@@ -1032,6 +1438,8 @@ export default function Planner({ variant = 'grid' }) {
 
   // Concurrency tuning for prefetchers (configurable via env; falls back to hardwareConcurrency)
   const hwc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : 8;
+  // Feature flag: disable precache/prefetch since pickers are live-only now
+  const ENABLE_PRECACHE = false;
   const PREFETCH_SLOT_CONC = (() => {
     const v = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PRECACHE_ITEMS_CONC) ? Number(import.meta.env.VITE_PRECACHE_ITEMS_CONC) : NaN;
     if (!Number.isNaN(v) && v > 0) return Math.floor(v);
@@ -1056,8 +1464,9 @@ export default function Planner({ variant = 'grid' }) {
   })();
   // Per-slot prefetchers: top 25 by item level per slot for the active career
   useEffect(() => {
-    let cancelled = false;
-    if (!career || pickerOpen) return;
+  let cancelled = false;
+  if (!ENABLE_PRECACHE) return () => { cancelled = true; };
+  if (!career || pickerOpen) return;
     let startTimer = null;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const runQueue = async (tasks, limit = PREFETCH_SLOT_CONC) => {
@@ -1150,7 +1559,6 @@ export default function Planner({ variant = 'grid' }) {
     incPrecache();
     startTimer = setTimeout(async () => {
       try {
-        try { warmCareerEnums(); } catch {}
         const tasks = targets.map(t => prefetchOne(t));
         await runQueue(tasks, PREFETCH_SLOT_CONC);
       } finally { decPrecache(); }
@@ -1404,47 +1812,7 @@ export default function Planner({ variant = 'grid' }) {
     setPickerSlot(`Talisman ${i + 1}`);
   // Ensure no stale item results leak into talisman picker
   setPickerItems([]);
-  // Prefetch talismans keyed by host item level for fast filtering
-  try {
-    const hostItem = equipped[hostSlotName];
-    const hostIlvl = Number(hostItem?.details?.itemLevel || hostItem?.details?.levelRequirement || hostItem?.itemLevel || hostItem?.levelRequirement || 0) || 0;
-    if (hostIlvl) {
-      const talisKey = JSON.stringify({ picker: 'talis-host', hostIlvl });
-      const hit = talisPickerCacheRef.current.get(talisKey);
-      if (!hit || !Array.isArray(hit.base) || hit.base.length === 0) {
-        setPickerLoading(true);
-        // Fire and store an in-flight promise so the picker can await it
-        const p = (async () => {
-          incPrecache();
-          try {
-            const rarList = ['UNCOMMON','RARE','VERY_RARE','MYTHIC'];
-            const byId = new Map();
-            for (const rar of rarList) {
-              try {
-                const arr = await fetchItems({ perPage: 50, totalLimit: 500, rarityEq: rar, allowAnyName: true, typeEq: 'ENHANCEMENT', order: [{ itemLevel: 'DESC' }] });
-                for (const n of (arr || [])) byId.set(String(n.id), n);
-              } catch {}
-            }
-            const base = Array.from(byId.values())
-              .filter((n) => {
-                const stats = Array.isArray(n?.stats) ? n.stats : (Array.isArray(n?.details?.stats) ? n.details.stats : []);
-                if (!Array.isArray(stats) || stats.length === 0) return false;
-                const tMin = Number(n?.levelRequirement || n?.itemLevel || n?.minimumRank || n?.details?.levelRequirement || n?.details?.itemLevel || 0) || 0;
-                if (tMin && hostIlvl && tMin > hostIlvl) return false;
-                return true;
-              })
-              .sort(sortByLevelRarity)
-              .slice(0, 50);
-            setTalisCache(talisKey, { base, ts: Date.now(), inFlight: null });
-          } finally {
-            decPrecache();
-          }
-        })();
-        // set the inFlight marker immediately
-        setTalisCache(talisKey, { base: hit?.base || [], ts: hit?.ts || 0, inFlight: p });
-      }
-    }
-  } catch {}
+  // Live-only mode: no talisman precache performed here; picker will fetch live results
   // Decide loading state based on cache availability for the to-be-restored filters
   const rarityKey = String(lastTalisFilters.rarity || '');
   const keyExact = JSON.stringify({ picker: 'talis-base', rarity: rarityKey });
@@ -1456,7 +1824,11 @@ export default function Planner({ variant = 'grid' }) {
     setFilterStat(lastTalisFilters.stat || '');
     setFilterRarity(lastTalisFilters.rarity || '');
     setFilterSetOnly(false);
-    setPickerOpen(true);
+      if (!career) {
+        setPickerDebug({ slotName: `Talisman ${i + 1}`, notes: ['select-career-first'] });
+        return;
+      }
+      setPickerOpen(true);
   };
   const clearTalis = (hostSlotName, i) => {
     setTalismans((prev) => {
@@ -1895,7 +2267,7 @@ export default function Planner({ variant = 'grid' }) {
           debug.slotVariants = slotsToTry.slice();
           for (const s of slotsToTry) debug.requests.push({ slotEq: s, usableByCareer: careerEnum, perPage: 50, totalLimit: 500, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, caps: { levelRequirementLte: careerRank, renownRankRequirementLte: renownRank } });
           const withCareerSettled = await Promise.allSettled(
-            slotsToTry.map(async s => fetchItems({ career: careerEnum, perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder }))
+            slotsToTry.map(async s => fetchItems({ perPage: 50, totalLimit: 500, slotEq: s, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder }))
           );
           const byId = new Map();
           for (const r of withCareerSettled) {
@@ -1904,21 +2276,7 @@ export default function Planner({ variant = 'grid' }) {
             }
           }
           itemsRawCareer = Array.from(byId.values());
-          // Merge fetched name results into global per-rarity caches
-          if (filterName && itemsRawCareer.length) {
-            try {
-              for (const it of itemsRawCareer) {
-                const rar = String(it?.rarity || it?.details?.rarity || '').toUpperCase();
-                if (!rar) continue;
-                const gkey = JSON.stringify({ picker: 'item-global', rarity: rar, career, careerRank, renownRank, defaultMode: true });
-                const hit = itemPickerCacheRef.current.get(gkey);
-                const base = hit?.base || [];
-                const m = new Map(base.map(n => [String(n.id), n]));
-                m.set(String(it.id), it);
-                setItemCache(gkey, { base: Array.from(m.values()), ts: Date.now() });
-              }
-            } catch {}
-          }
+          // live-only mode: no client-side cache merging
         } else {
     // Ask server for exact slot (name search only); base lists should come from slot prefetch
           const slotEnum = (() => {
@@ -1944,9 +2302,8 @@ export default function Planner({ variant = 'grid' }) {
           debug.slotVariants = slotVariants.slice();
           for (const sv of slotVariants) {
             try {
-              const careerEnum = await mapCareer(career);
-              debug.requests.push({ slotEq: sv, usableByCareer: careerEnum, perPage: 50, totalLimit: 500, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, caps: { levelRequirementLte: careerRank, renownRankRequirementLte: renownRank } });
-              const arr = await fetchItems({ career: careerEnum, perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
+              debug.requests.push({ slotEq: sv, perPage: 50, totalLimit: 500, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, caps: { levelRequirementLte: careerRank, renownRankRequirementLte: renownRank } });
+              const arr = await fetchItems({ perPage: 50, totalLimit: 500, slotEq: sv, allowAnyName: !filterName, nameContains: filterName || undefined, rarityEq: filterRarity || undefined, maxLevelRequirement: careerRank, maxRenownRankRequirement: renownRank, order: defaultOrder });
               for (const n of (arr || [])) byId.set(String(n.id), n);
               // If we found items for one variant, we can continue to merge, or break early; keep merging to be safe
             } catch {
@@ -1956,21 +2313,7 @@ export default function Planner({ variant = 'grid' }) {
           }
           // No boosters or fallbacks without career; rely on server-side career filtering exclusively
           itemsRawCareer = Array.from(byId.values());
-          // Merge fetched name results into global per-rarity caches
-          if (filterName && itemsRawCareer.length) {
-            try {
-              for (const it of itemsRawCareer) {
-                const rar = String(it?.rarity || it?.details?.rarity || '').toUpperCase();
-                if (!rar) continue;
-                const gkey = JSON.stringify({ picker: 'item-global', rarity: rar, career, careerRank, renownRank, defaultMode: true });
-                const hit = itemPickerCacheRef.current.get(gkey);
-                const base = hit?.base || [];
-                const m = new Map(base.map(n => [String(n.id), n]));
-                m.set(String(it.id), it);
-                setItemCache(gkey, { base: Array.from(m.values()), ts: Date.now() });
-              }
-            } catch {}
-          }
+          // live-only mode: no client-side cache merging for fetched names
         }
         // Apply client-side slot filtering to handle naming differences (e.g., jewelry)
   // acceptable and friendlySlot precomputed earlier
@@ -2460,15 +2803,18 @@ export default function Planner({ variant = 'grid' }) {
       <label>
         {/* Persistent icon slot to reserve space; render icon when career chosen */}
         <span className="career-icon-slot">
-          {CAREER_ICON_URLS?.[career] ? (
-            <img key={career} className="career-icon" src={CAREER_ICON_URLS[career]} alt="" />
+          {getCareerIconUrl(career) ? (
+            <img key={career} className="career-icon" src={getCareerIconUrl(career)} alt="" />
           ) : null}
         </span>
   <select title="Career" value={career || ''} onChange={(e) => setCareer(e.target.value)}>
           <option value="">Choose career...</option>
-          {CAREERS.map((c) => (
-            <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
-          ))}
+          {getCareers()
+            .slice()
+            .sort((a, b) => a.replaceAll('_', ' ').localeCompare(b.replaceAll('_', ' '), undefined, { sensitivity: 'base' }))
+            .map((c) => (
+              <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+            ))}
         </select>
       </label>
       <label>
@@ -2534,6 +2880,10 @@ export default function Planner({ variant = 'grid' }) {
             setFilterSetOnly(!!lastItemFilters.setOnly);
           }
           setPickerSlot(el.getAttribute('data-slotname'));
+          if (!career) {
+            setPickerDebug({ slotName: el.getAttribute('data-slotname'), notes: ['select-career-first'] });
+            return;
+          }
           setPickerOpen(true);
         }}
       >
@@ -2612,6 +2962,7 @@ export default function Planner({ variant = 'grid' }) {
               setFilterSetOnly(!!lastItemFilters.setOnly);
             }
             setPickerSlot(el.getAttribute('data-slotname'));
+            if (!career) { setPickerDebug({ slotName: el.getAttribute('data-slotname'), notes: ['select-career-first'] }); return; }
             setPickerOpen(true);
           }}
         >
@@ -2659,6 +3010,8 @@ export default function Planner({ variant = 'grid' }) {
           setFilterStat={setFilterStat}
           filterRarity={filterRarity}
           setFilterRarity={setFilterRarity}
+          careerRank={careerRank}
+          renownRank={renownRank}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
           isTalis={pickerIsTalis}
@@ -2702,21 +3055,25 @@ export default function Planner({ variant = 'grid' }) {
               setFilterSetOnly(!!lastItemFilters.setOnly);
             }
             setPickerSlot(el.getAttribute('data-slotname'));
+            if (!career) { setPickerDebug({ slotName: el.getAttribute('data-slotname'), notes: ['select-career-first'] }); return; }
             setPickerOpen(true);
           }}
         >
           <div className="ror-toolbar ror-panel">
             <label>
               <span className="career-icon-slot">
-                {CAREER_ICON_URLS?.[career] ? (
-                  <img key={career} className="career-icon" src={CAREER_ICON_URLS[career]} alt="" />
+                {getCareerIconUrl(career) ? (
+                  <img key={career} className="career-icon" src={getCareerIconUrl(career)} alt="" />
                 ) : null}
               </span>
               <select title="Career" value={career || ''} onChange={(e) => setCareer(e.target.value)}>
                 <option value="">Choose career...</option>
-                {CAREERS.map((c) => (
-                  <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
-                ))}
+                {getCareers()
+                  .slice()
+                  .sort((a, b) => a.replaceAll('_', ' ').localeCompare(b.replaceAll('_', ' '), undefined, { sensitivity: 'base' }))
+                  .map((c) => (
+                    <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                  ))}
               </select>
             </label>
             <label>
@@ -2816,6 +3173,8 @@ export default function Planner({ variant = 'grid' }) {
           setFilterStat={setFilterStat}
           filterRarity={filterRarity}
           setFilterRarity={setFilterRarity}
+          careerRank={careerRank}
+          renownRank={renownRank}
           filterSetOnly={filterSetOnly}
           setFilterSetOnly={setFilterSetOnly}
           isTalis={pickerIsTalis}

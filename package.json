@@ -7,8 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-  "preview": "vite preview"
-  
+    "preview": "vite preview",
+  "fetch:schema": "node scripts/fetch-schema.js",
+  "check:schema": "node scripts/compare-schemas.js",
+  "prestart": "node scripts/fetch-schema.js",
+  "predev": "node scripts/fetch-schema.js"
   },
   "dependencies": {
   "node-fetch": "^3.3.2",

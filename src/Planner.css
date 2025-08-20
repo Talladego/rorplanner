@@ -300,6 +300,22 @@
 .tooltip-card.rarity-mythic .tooltip-name { color: #ff7b00; }
 /* Set item name in tooltip: override color */
 .tooltip-card .tooltip-name.name-set { color: #f5c542; }
+
+/* Ensure per-row rarity classes on .tooltip-name are applied even inside tooltip body */
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-utility { color: #9aa0a6; }
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-common { color: #e0e0e0; }
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-uncommon { color: #5dd87c; }
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-rare { color: #2bb3ff; }
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-very_rare { color: #a78bfa; }
+.tooltip-card .tooltip-body .talis-line .tooltip-name.rarity-mythic { color: #ff7b00; }
+
+/* Per-row rarity color on contributor name spans inside tooltip body */
+.tooltip-card .tooltip-name.rarity-utility { color: #9aa0a6; }
+.tooltip-card .tooltip-name.rarity-common { color: #e0e0e0; }
+.tooltip-card .tooltip-name.rarity-uncommon { color: #5dd87c; }
+.tooltip-card .tooltip-name.rarity-rare { color: #2bb3ff; }
+.tooltip-card .tooltip-name.rarity-very_rare { color: #a78bfa; }
+.tooltip-card .tooltip-name.rarity-mythic { color: #ff7b00; }
 .tooltip-card .tooltip-meta { opacity: 0.9; font-size: 0.82rem; margin-top: 2px; }
 .tooltip-card .tooltip-body { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
 .tooltip-card .tooltip-section { display: flex; flex-direction: column; gap: 4px; }

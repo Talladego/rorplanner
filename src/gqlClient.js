@@ -1,11 +1,12 @@
-// Prefer a proxy endpoint (e.g., Cloudflare Worker) specified via env, else use dev proxy or direct API.
-const CF_PROXY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GQL_PROXY_URL) ? import.meta.env.VITE_GQL_PROXY_URL : '';
-const GQL_ENDPOINT = CF_PROXY || ((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-  ? '/graphql'
-  : 'https://production-api.waremu.com/graphql');
+import schemaLoader from './schemaLoader.js';
+
+// Endpoint is determined by the runtime schema loader (respects VITE_GQL_PROXY_URL and local dev host)
+function GQL_ENDPOINT() {
+  try { return schemaLoader.getEndpoint(); } catch { return 'https://production-api.waremu.com/graphql'; }
+}
 
 async function post(query, variables) {
-  const res = await fetch(GQL_ENDPOINT, {
+  const res = await fetch(GQL_ENDPOINT(), {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -32,6 +33,15 @@ function toEnum(val) {
 let CACHED_CAREER_ENUMS = null;
 async function fetchCareerEnumsOnce() {
   if (Array.isArray(CACHED_CAREER_ENUMS)) return CACHED_CAREER_ENUMS;
+  try {
+    const { enumMap } = await schemaLoader.ensureSchemaLoaded();
+    if (enumMap && enumMap['Career']) {
+      CACHED_CAREER_ENUMS = Array.from(enumMap['Career']);
+      return CACHED_CAREER_ENUMS;
+    }
+  } catch (e) {
+    // fallback to introspection via post if loader didn't produce enums
+  }
   const q = `query($name:String!){ __type(name:$name){ enumValues { name } } }`;
   try {
     const data = await post(q, { name: 'Career' });
@@ -121,6 +131,26 @@ export async function fetchItems({ career, perPage = 50, totalLimit = 200, typeE
   return out;
 }
 
+export async function fetchItemsPage({ career, first = 10, after = undefined, typeEq, nameContains, allowAnyName = false, slotEq, rarityEq, maxLevelRequirement, maxRenownRankRequirement, order } = {}) {
+  const q = `query($first:Int,$after:String,$where: ItemFilterInput,$usableByCareer: Career,$order:[ItemSortInput!]){
+    items(first:$first, after:$after, where:$where, usableByCareer:$usableByCareer, order:$order){
+      nodes{ id name description type slot levelRequirement itemLevel renownRankRequirement iconUrl talismanSlots rarity uniqueEquipped careerRestriction stats { stat value percentage } itemSet{ id name } }
+      pageInfo{ hasNextPage endCursor }
+    }
+  }`;
+  const where = allowAnyName || !nameContains ? {} : { name: { contains: nameContains } };
+  if (typeEq) where.type = { eq: toEnum(typeEq) };
+  if (slotEq) where.slot = { eq: toEnum(slotEq) };
+  if (rarityEq) where.rarity = { eq: toEnum(rarityEq) };
+  if (typeof maxLevelRequirement === 'number') where.levelRequirement = { lte: maxLevelRequirement };
+  if (typeof maxRenownRankRequirement === 'number') where.renownRankRequirement = { lte: maxRenownRankRequirement };
+  const usableCareer = career ? mapCareerEnum(career) : undefined;
+  const variables = { first: Math.max(1, Math.min(Number(first) || 10, 100)), after, where: Object.keys(where).length ? where : undefined, usableByCareer: usableCareer, order };
+  const data = await post(q, variables);
+  const conn = data?.items || { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } };
+  return { nodes: conn.nodes || [], pageInfo: conn.pageInfo || { hasNextPage: false, endCursor: null } };
+}
+
 export async function fetchItemDetails(id) {
   const q = `query($id: ID!){
     item(id:$id){
@@ -137,7 +167,4 @@ export async function fetchItemDetails(id) {
 
 // Optional: pre-warm the career enum cache on app load;
 // non-blocking and failures are ignored.
-export function warmCareerEnums() {
-  // Fire and forget
-  fetchCareerEnumsOnce().catch(() => {});
-}
+// warmCareerEnums removed: schemaLoader is used at bootstrap to populate enums.

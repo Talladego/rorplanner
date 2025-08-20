@@ -1,17 +1,23 @@
-export const DEFAULT_CAREER = 'ARCHMAGE';
+import schemaLoader from './schemaLoader.js';
+
+// Default that can be used if schema lookup fails for some reason.
 export const DEFAULT_ARMOR_TYPE = 'ROBE';
 
-// Supported careers (values match scraped filenames)
-export const CAREERS = [
-	'ARCHMAGE','BLACKGUARD','BLACK_ORC','BRIGHT_WIZARD','CHOPPA','CHOSEN','DISCIPLE_OF_KHAINE','ENGINEER','IRON_BREAKER','KNIGHT_OF_THE_BLAZING_SUN','MAGUS','MARAUDER','RUNE_PRIEST','SHADOW_WARRIOR','SHAMAN','SLAYER','SORCERER','SQUIG_HERDER','SWORD_MASTER','WARRIOR_PRIEST','WHITE_LION','WITCH_ELF','WITCH_HUNTER','ZEALOT'
-];
+// Runtime getters that pull enum values from the live schema loader.
+// These are functions (not evaluated at module load) so callers get
+// the latest values after the app bootstrap awaited schema loading.
+export function getCareers() {
+	return schemaLoader.getEnumValues('Career') || [];
+}
 
-// Build a prioritized list of data paths for a given career.
-// Order: career Sovereign → legacy career/type (ROBE) → combined Sovereign (filter client-side)
-// Static data paths removed for Pages; live GraphQL is the only source.
+export function getDefaultCareer() {
+	const c = getCareers();
+	return c && c.length ? c[0] : 'ARCHMAGE';
+}
 
-// Mapping from UI career identifiers to Race enum values (as exposed by GraphQL)
-export const CAREER_TO_RACE = {
+// Local fallbacks for mappings that the GraphQL schema doesn't directly expose.
+// Keep these small and validate keys at runtime against the enum list.
+const LOCAL_CAREER_TO_RACE = {
 	ARCHMAGE: 'HIGH_ELF',
 	BLACKGUARD: 'DARK_ELF',
 	BLACK_ORC: 'ORC',
@@ -38,7 +44,10 @@ export const CAREER_TO_RACE = {
 	ZEALOT: 'CHAOS'
 };
 
-// Optional: Race to Realm (ORDER/DESTRUCTION) context
+export function getRaceForCareer(career) {
+	return LOCAL_CAREER_TO_RACE[career] || null;
+}
+
 export const RACE_TO_REALM = {
 	DWARF: 'ORDER',
 	HIGH_ELF: 'ORDER',
@@ -49,8 +58,7 @@ export const RACE_TO_REALM = {
 	CHAOS: 'DESTRUCTION'
 };
 
-// Career icon URLs from killboard (slug = display name, lowercase, words hyphenated; single-word careers have no hyphen)
-export const CAREER_ICON_URLS = {
+const LOCAL_CAREER_ICON_URLS = {
 	ARCHMAGE: 'https://killboard.returnofreckoning.com/images/icons/archmage.png',
 	BLACKGUARD: 'https://killboard.returnofreckoning.com/images/icons/black-guard.png',
 	BLACK_ORC: 'https://killboard.returnofreckoning.com/images/icons/black-orc.png',
@@ -69,10 +77,14 @@ export const CAREER_ICON_URLS = {
 	SLAYER: 'https://killboard.returnofreckoning.com/images/icons/slayer.png',
 	SORCERER: 'https://killboard.returnofreckoning.com/images/icons/sorcerer.png',
 	SQUIG_HERDER: 'https://killboard.returnofreckoning.com/images/icons/squig-herder.png',
-		SWORD_MASTER: 'https://killboard.returnofreckoning.com/images/icons/sword-master.png',
+	SWORD_MASTER: 'https://killboard.returnofreckoning.com/images/icons/sword-master.png',
 	WARRIOR_PRIEST: 'https://killboard.returnofreckoning.com/images/icons/warrior-priest.png',
 	WHITE_LION: 'https://killboard.returnofreckoning.com/images/icons/white-lion.png',
 	WITCH_ELF: 'https://killboard.returnofreckoning.com/images/icons/witch-elf.png',
 	WITCH_HUNTER: 'https://killboard.returnofreckoning.com/images/icons/witch-hunter.png',
 	ZEALOT: 'https://killboard.returnofreckoning.com/images/icons/zealot.png'
 };
+
+export function getCareerIconUrl(career) {
+	return LOCAL_CAREER_ICON_URLS[career] || null;
+}
